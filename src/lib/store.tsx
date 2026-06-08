@@ -419,7 +419,9 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
               signInErr.code === 'auth/user-not-found' || 
               signInErr.code === 'auth/invalid-credential' || 
               signInErr.code === 'auth/missing-password' ||
-              signInErr.code === 'auth/invalid-email'
+              signInErr.code === 'auth/invalid-email' ||
+              String(signInErr).includes('auth/user-not-found') ||
+              String(signInErr).includes('auth/invalid-credential')
             ) {
               const res = await registerUserWithEmail(cleanEmail, password);
               firebaseUser = res.user;
@@ -428,30 +430,35 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
             }
           }
 
+          // Decentralize creation to onAuthStateChanged: Poll until the new or existing profile gets loaded by listener
           let profile = await getUserProfile(firebaseUser.uid);
-          if (profile) {
-            if (!profile.isActive) {
-              await signOutUser();
-              throw new Error('This user account has been disabled by security administrators.');
-            }
-            profile = { ...profile, lastLogin: new Date().toISOString() };
-            await updateUserLastLogin(firebaseUser.uid, profile.lastLogin);
+          let attempts = 0;
+          while (!profile && attempts < 10) {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            profile = await getUserProfile(firebaseUser.uid);
+            attempts++;
+          }
+
+          if (!profile) {
+            throw new Error('Timeout while loading user registration profile.');
+          }
+
+          if (!profile.isActive) {
+            await signOutUser();
+            throw new Error('This user account has been disabled by security administrators.');
+          }
+
+          // Only update changeable metadata fields to avoid key conflicts or schema creation collisions
+          const finalName = name || profile.name;
+          if (finalName !== profile.name) {
+            await saveUserProfile(firebaseUser.uid, {
+              name: finalName,
+              lastLogin: new Date().toISOString()
+            });
+            profile = { ...profile, name: finalName, lastLogin: new Date().toISOString() };
           } else {
-            const refCode = generateReferralCode();
-            profile = {
-              uid: firebaseUser.uid,
-              name: name || email.split('@')[0],
-              email: cleanEmail,
-              photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${firebaseUser.uid}`,
-              provider: ProviderType.EMAIL,
-              coins: 0,
-              referralCode: refCode,
-              createdAt: new Date().toISOString(),
-              lastLogin: new Date().toISOString(),
-              isActive: true,
-              isAdmin: cleanEmail === 'game.rewardyn@gmail.com'
-            };
-            await saveUserProfile(firebaseUser.uid, profile);
+            await updateUserLastLogin(firebaseUser.uid, new Date().toISOString());
+            profile.lastLogin = new Date().toISOString();
           }
           
           const finalProfile = await ensureLoginCoins(profile, allUsers);
@@ -509,31 +516,28 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
         try {
           const res = await loginUserAnonymously();
           const firebaseUser = res.user;
-          let profile = await getUserProfile(firebaseUser.uid);
           
-          if (profile) {
-            if (!profile.isActive) {
-              await signOutUser();
-              throw new Error('This guest session has been blacklisted.');
-            }
-            profile = { ...profile, lastLogin: new Date().toISOString() };
-            await updateUserLastLogin(firebaseUser.uid, profile.lastLogin);
-          } else {
-            const randName = `Guest #${Math.floor(1000 + Math.random() * 9000)}`;
-            profile = {
-              uid: firebaseUser.uid,
-              name: randName,
-              email: `${firebaseUser.uid.substring(0, 8)}@rewardgaming.dev`,
-              photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${firebaseUser.uid}`,
-              provider: ProviderType.GUEST,
-              coins: 0,
-              referralCode: generateReferralCode(),
-              createdAt: new Date().toISOString(),
-              lastLogin: new Date().toISOString(),
-              isActive: true,
-            };
-            await saveUserProfile(firebaseUser.uid, profile);
+          // Poll until registered by our central listener
+          let profile = await getUserProfile(firebaseUser.uid);
+          let attempts = 0;
+          while (!profile && attempts < 10) {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            profile = await getUserProfile(firebaseUser.uid);
+            attempts++;
           }
+          
+          if (!profile) {
+            throw new Error('Guest profile creation timeout.');
+          }
+
+          if (!profile.isActive) {
+            await signOutUser();
+            throw new Error('This guest session has been blacklisted.');
+          }
+
+          await updateUserLastLogin(firebaseUser.uid, new Date().toISOString());
+          profile.lastLogin = new Date().toISOString();
+
           setUser(profile);
           localStorage.setItem('rg_user_session', JSON.stringify(profile));
           return profile;
@@ -570,39 +574,40 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       if (isFirebaseLive && !forceSimulate) {
         const result = await loginUserWithGoogle();
         const firebaseUser = result.user;
-        let profile = await getUserProfile(firebaseUser.uid);
         
-        if (profile) {
-          if (!profile.isActive) {
-            await signOutUser();
-            throw new Error('This user account is banned.');
-          }
-          profile = {
-            ...profile,
-            photoURL: firebaseUser.photoURL || photoURL || profile.photoURL,
-            name: firebaseUser.displayName || name || profile.name,
-            lastLogin: new Date().toISOString()
-          };
-          await saveUserProfile(firebaseUser.uid, {
-            name: profile.name,
-            photoURL: profile.photoURL,
-            lastLogin: profile.lastLogin
-          });
+        // Let onAuthStateChanged handle the authoritative creation and registration
+        let profile = await getUserProfile(firebaseUser.uid);
+        let attempts = 0;
+        while (!profile && attempts < 10) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          profile = await getUserProfile(firebaseUser.uid);
+          attempts++;
+        }
+
+        if (!profile) {
+          throw new Error('Timeout loading google user profile.');
+        }
+
+        if (!profile.isActive) {
+          await signOutUser();
+          throw new Error('This user account is banned.');
+        }
+
+        // Safe metadata update
+        const finalName = firebaseUser.displayName || name || profile.name;
+        const finalPhoto = firebaseUser.photoURL || photoURL || profile.photoURL;
+
+        if (finalName !== profile.name || finalPhoto !== profile.photoURL) {
+          const updateObj: Partial<UserProfile> = {};
+          if (finalName !== profile.name) updateObj.name = finalName;
+          if (finalPhoto !== profile.photoURL) updateObj.photoURL = finalPhoto;
+          updateObj.lastLogin = new Date().toISOString();
+
+          await saveUserProfile(firebaseUser.uid, updateObj);
+          profile = { ...profile, ...updateObj };
         } else {
-          profile = {
-            uid: firebaseUser.uid,
-            name: firebaseUser.displayName || name || 'Google Player',
-            email: firebaseUser.email?.toLowerCase() || (email?.trim().toLowerCase()) || `${firebaseUser.uid}@reward-sandbox.com`,
-            photoURL: firebaseUser.photoURL || photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${firebaseUser.uid}`,
-            provider: ProviderType.GOOGLE,
-            coins: 20,
-            referralCode: generateReferralCode(),
-            createdAt: new Date().toISOString(),
-            lastLogin: new Date().toISOString(),
-            isActive: true,
-            isAdmin: (firebaseUser.email?.toLowerCase()) === 'game.rewardyn@gmail.com'
-          };
-          await saveUserProfile(firebaseUser.uid, profile);
+          await updateUserLastLogin(firebaseUser.uid, new Date().toISOString());
+          profile.lastLogin = new Date().toISOString();
         }
         
         setUser(profile);
