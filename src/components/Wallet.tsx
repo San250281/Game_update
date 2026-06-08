@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useRewardEngine } from '../lib/store';
 import { TransactionSource } from '../types';
-import { Coins, Plus, Minus, Calendar, History, Sparkles, Check, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Coins, Calendar, History, Sparkles, Check, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const DAILY_REWARDS = [
@@ -92,25 +92,25 @@ export default function Wallet() {
   };
 
   return (
-    <div className="bg-[#12141c] border border-[#232835] rounded-3xl p-6 relative overflow-hidden shadow-2xl max-w-lg mx-auto">
+    <div className="bg-white border border-slate-200 rounded-3xl p-6 relative overflow-hidden shadow-md max-w-lg mx-auto text-slate-800">
       {/* Background radial overlay */}
-      <div className="absolute top-0 right-0 w-44 h-44 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 right-0 w-44 h-44 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Profile summary banner */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-xs text-gray-500 uppercase font-bold tracking-wider">Active Wallet Balance</h3>
+          <h3 className="text-xs text-slate-500 uppercase font-bold tracking-wider">Active Wallet Balance</h3>
           <div className="flex items-center gap-1 mt-1">
-            <Coins className="w-5.5 h-5.5 text-yellow-400 shrink-0" />
-            <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-200">
+            <Coins className="w-5.5 h-5.5 text-amber-505 shrink-0" />
+            <h1 className="text-3xl font-black text-slate-900">
               {user ? user.coins.toLocaleString() : '0'}
             </h1>
           </div>
         </div>
 
-        <div className="p-3 bg-slate-900 border border-slate-800 rounded-2xl text-right">
-          <p className="text-[10px] text-gray-400 uppercase">Loyalty Status</p>
-          <p className="text-xs text-amber-400 font-extrabold flex items-center justify-end gap-1 uppercase tracking-wide">
+        <div className="p-3 bg-slate-50 border border-slate-150 rounded-2xl text-right">
+          <p className="text-[10px] text-slate-500 uppercase font-bold">Loyalty Status</p>
+          <p className="text-xs text-amber-750 font-black flex items-center justify-end gap-1 uppercase tracking-wide">
             <Sparkles className="w-3.5 h-3.5" />
             Vip Gamer
           </p>
@@ -118,13 +118,13 @@ export default function Wallet() {
       </div>
 
       {/* Tabs navigation HUD */}
-      <div className="flex bg-slate-900/80 p-1 border border-slate-800/80 rounded-2xl mb-6">
+      <div className="flex bg-slate-100 p-1 border border-slate-200 rounded-2xl mb-6">
         <button
           onClick={() => setActiveTab('claim')}
-          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
             activeTab === 'claim'
-              ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow'
-              : 'text-gray-400 hover:text-white'
+              ? 'bg-white shadow-sm text-amber-700 font-extrabold'
+              : 'text-slate-550 hover:text-slate-900'
           }`}
         >
           <Calendar className="w-4 h-4" />
@@ -132,10 +132,10 @@ export default function Wallet() {
         </button>
         <button
           onClick={() => setActiveTab('history')}
-          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
             activeTab === 'history'
-              ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow'
-              : 'text-gray-400 hover:text-white'
+              ? 'bg-white shadow-sm text-amber-700 font-extrabold'
+              : 'text-slate-550 hover:text-slate-900'
           }`}
         >
           <History className="w-4 h-4" />
@@ -153,10 +153,10 @@ export default function Wallet() {
             className="flex flex-col gap-5"
           >
             <div>
-              <h4 className="text-xs font-bold text-gray-300 uppercase tracking-widest mb-2.5">
+              <h4 className="text-xs font-bold text-slate-805 uppercase tracking-widest mb-2.5">
                 7-Day Rewards Calendar
               </h4>
-              <p className="text-[11px] text-gray-400 leading-relaxed">
+              <p className="text-[11px] text-slate-500 leading-relaxed">
                 Log in and tap claim daily to maintain your loyalty streak! Claiming resets back to Day 1 once you finish the weekly sheet.
               </p>
             </div>
@@ -166,21 +166,20 @@ export default function Wallet() {
               {DAILY_REWARDS.map((item) => {
                 const isClaimed = item.day < currentStreak && !canClaimToday;
                 const isCurrent = item.day === currentStreak && canClaimToday;
-                const isLocked = item.day > currentStreak || (!canClaimToday && item.day >= currentStreak);
 
                 return (
                   <div
                     key={item.day}
                     className={`p-2.5 rounded-xl flex flex-col items-center justify-between text-center border transition-all ${
                       isClaimed
-                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                         : isCurrent
-                        ? 'bg-amber-500/15 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] text-amber-400 animate-pulse'
-                        : 'bg-slate-900/60 border-slate-800 text-gray-500'
+                        ? 'bg-amber-50 border-amber-500 shadow-sm text-amber-700 animate-pulse'
+                        : 'bg-slate-50 border-slate-150 text-slate-400'
                     }`}
                   >
                     <span className="text-[10px] font-bold">D{item.day}</span>
-                    <Coins className={`w-5 h-5 my-1.5 ${isCurrent ? 'text-amber-400' : isClaimed ? 'text-emerald-400' : 'text-slate-600'}`} />
+                    <Coins className={`w-5 h-5 my-1.5 ${isCurrent ? 'text-amber-550' : isClaimed ? 'text-emerald-500' : 'text-slate-300'}`} />
                     <span className="text-[10px] font-mono font-black">+{item.reward}</span>
 
                     {/* Miniature verification icons */}
@@ -200,21 +199,21 @@ export default function Wallet() {
                 <button
                   id="claim_daily_wallet_btn"
                   onClick={handleClaimDaily}
-                  className="w-full py-3.5 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 hover:scale-[1.01] hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all cursor-pointer text-slate-950 font-black text-xs uppercase rounded-xl tracking-wider flex items-center justify-center gap-1.5"
+                  className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:shadow-md transition-all cursor-pointer text-white font-black text-xs uppercase rounded-xl tracking-wider flex items-center justify-center gap-1.5"
                 >
                   <Calendar className="w-4.5 h-4.5" />
                   Claim Day {currentStreak} Reward!
                 </button>
               ) : (
-                <div className="bg-slate-900 border border-slate-800 rounded-xl py-3 px-5 text-center text-xs text-gray-500 font-bold flex items-center justify-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  Your streak reward is claimed! Return in the next calendar date.
+                <div className="bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-center text-xs text-slate-500 font-bold flex items-center justify-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-600" />
+                  Your streak reward is claimed! Return on the next calendar date.
                 </div>
               )}
             </div>
 
             {claimFeedback && (
-              <p className="text-center font-bold text-xs text-emerald-400 mt-1 animate-pulse">
+              <p className="text-center font-bold text-xs text-emerald-650 mt-1 animate-pulse">
                 {claimFeedback}
               </p>
             )}
@@ -230,19 +229,19 @@ export default function Wallet() {
             className="flex flex-col"
           >
             <div className="flex justify-between items-center mb-4">
-              <h4 className="text-xs font-bold text-gray-300 uppercase tracking-widest">
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-widest">
                 Double-Ledger Audit
               </h4>
-              <span className="text-[10px] text-gray-500 font-mono">
+              <span className="text-[10px] text-slate-400 font-mono font-bold">
                 SECURE SHA-256 SYMMETRIC LEDGERS
               </span>
             </div>
 
             <div className="flex flex-col gap-2.5 max-h-[300px] overflow-y-auto pr-1">
               {transactions.length === 0 ? (
-                <div className="text-center py-10 border border-[#232835] border-dashed rounded-xl ">
-                  <History className="w-8 h-8 text-slate-700 mx-auto mb-2.5" />
-                  <p className="text-xs text-gray-500">No transactions recorded yet in your wallet ledger.</p>
+                <div className="text-center py-10 border border-slate-200 border-dashed rounded-xl">
+                  <History className="w-8 h-8 text-slate-300 mx-auto mb-2.5" />
+                  <p className="text-xs text-slate-400">No transactions recorded yet in your wallet ledger.</p>
                 </div>
               ) : (
                 transactions.map((tx) => {
@@ -250,23 +249,23 @@ export default function Wallet() {
                   return (
                     <div
                       key={tx.transactionId}
-                      className="bg-slate-900/60 border border-slate-800/80 hover:border-slate-700/60 rounded-xl p-3 flex justify-between items-center transition-all"
+                      className="bg-slate-50 border border-slate-150 hover:border-slate-250 rounded-xl p-3 flex justify-between items-center transition-all"
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                          isCredit ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                          isCredit ? 'bg-emerald-50 text-emerald-605' : 'bg-rose-50 text-rose-605'
                         }`}>
                           {isCredit ? (
-                            <ArrowUpRight className="w-5 h-5" />
+                            <ArrowUpRight className="w-5 h-5 text-emerald-600" />
                           ) : (
-                            <ArrowDownRight className="w-5 h-5" />
+                            <ArrowDownRight className="w-5 h-5 text-rose-600" />
                           )}
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-white leading-tight">
+                          <p className="text-xs font-bold text-slate-800 leading-tight">
                             {formatSource(tx.source)}
                           </p>
-                          <span className="text-[10px] text-gray-500 font-mono">
+                          <span className="text-[10px] text-slate-500 font-mono">
                             ID: {tx.transactionId.substring(0, 12)}... • {new Date(tx.createdAt).toLocaleTimeString()}
                           </span>
                         </div>
@@ -274,12 +273,12 @@ export default function Wallet() {
 
                       <div className="text-right">
                         <span className={`text-sm font-black flex items-center gap-0.5 justify-end ${
-                          isCredit ? 'text-emerald-400' : 'text-rose-400'
+                          isCredit ? 'text-emerald-700' : 'text-rose-750'
                         }`}>
                           {isCredit ? '+' : '-'}{tx.coins.toLocaleString()}
-                          <Coins className="w-3.5 h-3.5 text-yellow-500" />
+                          <Coins className="w-3.5 h-3.5 text-amber-500" />
                         </span>
-                        <p className="text-[9px] text-gray-500 tracking-wider font-mono">
+                        <p className="text-[9px] text-slate-500 tracking-wider font-mono">
                           {tx.type.toUpperCase()}
                         </p>
                       </div>

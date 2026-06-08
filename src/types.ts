@@ -43,6 +43,9 @@ export interface UserProfile {
   lastLogin: string;
   isActive: boolean;
   isAdmin?: boolean;
+  lastLoginCoinClaimedDate?: string;
+  adsWatchedToday?: number;
+  lastAdWatchedAt?: string;
 }
 
 export interface WalletTransaction {
