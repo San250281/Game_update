@@ -12,6 +12,11 @@ import {
 import { isFirebaseLive, db, auth } from '../firebase';
 import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 
+const isMockUid = (uid?: string): boolean => {
+  if (!uid) return true;
+  return uid.startsWith('google_local_') || uid.startsWith('email_') || uid.startsWith('guest_') || uid === 'anonymous_sandbox_uid';
+};
+
 // Validate environment
 import '../config/env';
 
@@ -359,7 +364,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       lastLogin: new Date().toISOString()
     };
 
-    if (isFirebaseLive) {
+    if (isFirebaseLive && !isMockUid(profile.uid)) {
       await createWalletTransaction(newTx, updatedCoins);
       await saveUserProfile(profile.uid, {
         lastLoginCoinClaimedDate: today,
@@ -386,7 +391,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
   };
 
   const registerUserRecord = async (profile: UserProfile, listUsers: UserProfile[]) => {
-    if (isFirebaseLive) {
+    if (isFirebaseLive && !isMockUid(profile.uid)) {
       await saveUserProfile(profile.uid, profile);
     }
     const updatedUsers = [...listUsers, profile];
@@ -677,7 +682,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     const newCoinCount = user.coins + amount;
     const updatedUser = { ...user, coins: newCoinCount };
 
-    if (isFirebaseLive) {
+    if (isFirebaseLive && !isMockUid(user.uid)) {
       await createWalletTransaction(newTx, newCoinCount);
     }
 
@@ -710,7 +715,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     const newCoinCount = user.coins - amount;
     const updatedUser = { ...user, coins: newCoinCount };
 
-    if (isFirebaseLive) {
+    if (isFirebaseLive && !isMockUid(user.uid)) {
       await createWalletTransaction(newTx, newCoinCount);
     }
 
@@ -764,7 +769,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       createdAt: new Date().toISOString()
     };
 
-    if (isFirebaseLive) {
+    if (isFirebaseLive && !isMockUid(user.uid)) {
       try {
         await createWithdrawalInDb(newRequest);
       } catch (err: any) {
@@ -819,7 +824,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       createdAt: new Date().toISOString()
     };
 
-    if (isFirebaseLive) {
+    if (isFirebaseLive && !isMockUid(request.uid)) {
       await updateWithdrawalInDb(requestId, {
         status: WithdrawalStatus.APPROVED,
         processedAt: finalRequest.processedAt,
@@ -883,7 +888,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       adminMessage: adminMessage || 'Rejected by administrator review.'
     };
 
-    if (isFirebaseLive) {
+    if (isFirebaseLive && !isMockUid(request.uid)) {
       await updateWithdrawalInDb(requestId, {
         status: WithdrawalStatus.REJECTED,
         processedAt: finalRequest.processedAt,
@@ -960,7 +965,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       createdAt: new Date().toISOString()
     };
 
-    if (isFirebaseLive) {
+    if (isFirebaseLive && !isMockUid(user.uid)) {
       await saveGameSession(newSession);
     }
 
@@ -1058,7 +1063,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       createdAt: new Date().toISOString()
     };
 
-    if (isFirebaseLive) {
+    if (isFirebaseLive && !isMockUid(user.uid) && !isMockUid(referrer.uid)) {
       await applyReferralInDb(
         refRecord,
         user.uid,
@@ -1076,7 +1081,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     const updatedRefs = [refRecord, ...referrals];
     setReferrals(updatedRefs);
 
-    if (!isFirebaseLive) {
+    if (!isFirebaseLive || isMockUid(user.uid) || isMockUid(referrer.uid)) {
       localStorage.setItem(`rg_referrals_${user.uid}`, JSON.stringify(updatedRefs));
     }
 
@@ -1090,7 +1095,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     });
     setAllUsers(updatedUsersList);
 
-    if (!isFirebaseLive) {
+    if (!isFirebaseLive || isMockUid(user.uid) || isMockUid(referrer.uid)) {
       localStorage.setItem('rg_users', JSON.stringify(updatedUsersList));
       const compTxListStr = localStorage.getItem(`rg_tx_${referrer.uid}`);
       const compTxList: WalletTransaction[] = compTxListStr ? JSON.parse(compTxListStr) : [];
@@ -1139,7 +1144,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     const nextAdsCount = cleanAdsWatchedToday + 1;
     const lastAdWatchedAt = new Date().toISOString();
 
-    if (isFirebaseLive) {
+    if (isFirebaseLive && !isMockUid(user.uid)) {
       await saveAdWatchInDb(user.uid, txId, newTx, nextCoins, nextAdsCount, lastAdWatchedAt);
     }
 
@@ -1189,7 +1194,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       createdAt: new Date().toISOString()
     };
 
-    if (isFirebaseLive) {
+    if (isFirebaseLive && !isMockUid(targetUid)) {
       await adminAdjustCoinsInDb(targetUid, cleanCoins, adminTx);
     }
 
@@ -1197,7 +1202,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     const nextUsers = allUsers.map(u => u.uid === targetUid ? updatedTargetUser : u);
     setAllUsers(nextUsers);
     
-    if (!isFirebaseLive) {
+    if (!isFirebaseLive || isMockUid(targetUid)) {
       localStorage.setItem('rg_users', JSON.stringify(nextUsers));
       const specTxKey = `rg_tx_${targetUid}`;
       const savedUserTxStr = localStorage.getItem(specTxKey);
@@ -1221,13 +1226,13 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     const toggle = !targetUser.isActive;
     const updatedUser = { ...targetUser, isActive: toggle };
 
-    if (isFirebaseLive) {
+    if (isFirebaseLive && !isMockUid(targetUid)) {
       await saveUserProfile(targetUid, { isActive: toggle });
     }
 
     const nextUsers = allUsers.map(u => u.uid === targetUid ? updatedUser : u);
     setAllUsers(nextUsers);
-    if (!isFirebaseLive) {
+    if (!isFirebaseLive || isMockUid(targetUid)) {
       localStorage.setItem('rg_users', JSON.stringify(nextUsers));
     }
 
