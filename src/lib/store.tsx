@@ -88,7 +88,7 @@ export interface RewardEngineState {
   // Authentications
   loginWithEmail: (email: string, name: string, password?: string) => Promise<UserProfile>;
   loginAsGuest: () => Promise<UserProfile>;
-  loginWithGoogleMock: (name: string, email: string, photoURL: string) => Promise<UserProfile>;
+  loginWithGoogle: (name?: string, email?: string, photoURL?: string) => Promise<UserProfile>;
   logout: () => Promise<void>;
   
   // Wallet & Transactions
@@ -564,68 +564,66 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     }
   };
 
-  const loginWithGoogleMock = async (name: string, email: string, photoURL: string) => {
+  const loginWithGoogle = async (name?: string, email?: string, photoURL?: string) => {
     setLoading(true);
     try {
-      const cleanEmail = email.trim().toLowerCase();
-      
       if (isFirebaseLive) {
-        try {
-          const result = await loginUserWithGoogle();
-          const firebaseUser = result.user;
-          let profile = await getUserProfile(firebaseUser.uid);
-          
-          if (profile) {
-            if (!profile.isActive) {
-              await signOutUser();
-              throw new Error('This user account is banned.');
-            }
-            profile = {
-              ...profile,
-              photoURL: firebaseUser.photoURL || photoURL || profile.photoURL,
-              name: firebaseUser.displayName || name || profile.name,
-              lastLogin: new Date().toISOString()
-            };
-            await saveUserProfile(firebaseUser.uid, {
-              name: profile.name,
-              photoURL: profile.photoURL,
-              lastLogin: profile.lastLogin
-            });
-          } else {
-            profile = {
-              uid: firebaseUser.uid,
-              name: firebaseUser.displayName || name || 'Google Player',
-              email: firebaseUser.email?.toLowerCase() || cleanEmail,
-              photoURL: firebaseUser.photoURL || photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${firebaseUser.uid}`,
-              provider: ProviderType.GOOGLE,
-              coins: 0,
-              referralCode: generateReferralCode(),
-              createdAt: new Date().toISOString(),
-              lastLogin: new Date().toISOString(),
-              isActive: true,
-              isAdmin: (firebaseUser.email?.toLowerCase() || cleanEmail) === 'game.rewardyn@gmail.com'
-            };
-            await saveUserProfile(firebaseUser.uid, profile);
+        const result = await loginUserWithGoogle();
+        const firebaseUser = result.user;
+        let profile = await getUserProfile(firebaseUser.uid);
+        
+        if (profile) {
+          if (!profile.isActive) {
+            await signOutUser();
+            throw new Error('This user account is banned.');
           }
-          
-          setUser(profile);
-          localStorage.setItem('rg_user_session', JSON.stringify(profile));
-          return profile;
-        } catch (popupErr) {
-          console.warn('Popup login failed, using local Google mock:', popupErr);
+          profile = {
+            ...profile,
+            photoURL: firebaseUser.photoURL || photoURL || profile.photoURL,
+            name: firebaseUser.displayName || name || profile.name,
+            lastLogin: new Date().toISOString()
+          };
+          await saveUserProfile(firebaseUser.uid, {
+            name: profile.name,
+            photoURL: profile.photoURL,
+            lastLogin: profile.lastLogin
+          });
+        } else {
+          profile = {
+            uid: firebaseUser.uid,
+            name: firebaseUser.displayName || name || 'Google Player',
+            email: firebaseUser.email?.toLowerCase() || (email?.trim().toLowerCase()) || `${firebaseUser.uid}@reward-sandbox.com`,
+            photoURL: firebaseUser.photoURL || photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${firebaseUser.uid}`,
+            provider: ProviderType.GOOGLE,
+            coins: 20,
+            referralCode: generateReferralCode(),
+            createdAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString(),
+            isActive: true,
+            isAdmin: (firebaseUser.email?.toLowerCase()) === 'game.rewardyn@gmail.com'
+          };
+          await saveUserProfile(firebaseUser.uid, profile);
         }
+        
+        setUser(profile);
+        localStorage.setItem('rg_user_session', JSON.stringify(profile));
+        return profile;
       }
 
       // Local sandbox google fallback
-      const existing = allUsers.find(u => u.email.toLowerCase() === cleanEmail);
+      const finalEmail = (email || 'game.rewardyn@gmail.com').trim().toLowerCase();
+      const finalName = name || 'Game Rewardyn';
+      const finalPhoto = photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${finalEmail}`;
+
+      const existing = allUsers.find(u => u.email.toLowerCase() === finalEmail);
       if (existing) {
         if (!existing.isActive) {
           throw new Error('This user account is banned.');
         }
         const updated = {
           ...existing,
-          photoURL: photoURL || existing.photoURL,
-          name: name || existing.name,
+          photoURL: finalPhoto || existing.photoURL,
+          name: finalName || existing.name,
           lastLogin: new Date().toISOString()
         };
         const list = allUsers.map(u => u.uid === existing.uid ? updated : u);
@@ -638,16 +636,16 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
         const newUid = 'google_local_' + Math.random().toString(36).substring(2, 11);
         const profile: UserProfile = {
           uid: newUid,
-          name: name || 'Google Player',
-          email: cleanEmail,
-          photoURL: photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${newUid}`,
+          name: finalName,
+          email: finalEmail,
+          photoURL: finalPhoto,
           provider: ProviderType.GOOGLE,
-          coins: 0,
+          coins: 20,
           referralCode: generateReferralCode(),
           createdAt: new Date().toISOString(),
           lastLogin: new Date().toISOString(),
           isActive: true,
-          isAdmin: cleanEmail === 'game.rewardyn@gmail.com'
+          isAdmin: finalEmail === 'game.rewardyn@gmail.com'
         };
         await registerUserRecord(profile, allUsers);
         return profile;
@@ -1292,7 +1290,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       
       loginWithEmail,
       loginAsGuest,
-      loginWithGoogleMock,
+      loginWithGoogle,
       logout,
       
       creditCoins,

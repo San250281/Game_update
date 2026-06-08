@@ -136,7 +136,8 @@ service cloud.firestore {
     }
 
     match /withdrawals/{requestId} {
-      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow get: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.uid == request.auth.uid || request.auth.token.email == 'game.rewardyn@gmail.com' || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
       allow create: if isSignedIn() && (incoming().uid == request.auth.uid || isAdmin()) && isValidWithdrawal(incoming()) && incoming().status == 'pending' && incoming().createdAt is string && incoming().createdAt.size() <= 50;
       allow update: if isAdmin();
       allow delete: if false;

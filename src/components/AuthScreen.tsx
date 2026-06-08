@@ -36,20 +36,13 @@ const getFriendlyNameFromEmail = (emailStr: string): string => {
 };
 
 export default function AuthScreen() {
-  const { loginWithEmail, loginAsGuest, loginWithGoogleMock } = useRewardEngine();
+  const { loginWithEmail, loginAsGuest, loginWithGoogle } = useRewardEngine();
   const [activeTab, setActiveTab] = useState<'signin' | 'register'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [errorHandled, setErrorHandled] = useState<string | null>(null);
   const [loadingLocal, setLoadingLocal] = useState(false);
-
-  // SSO Modal State
-  const [showSsoModal, setShowSsoModal] = useState(false);
-  const [ssoProvider, setSsoProvider] = useState<'Google' | 'Facebook' | null>(null);
-  const [ssoMode, setSsoMode] = useState<'choose' | 'custom'>('choose');
-  const [ssoName, setSsoName] = useState('');
-  const [ssoEmail, setSsoEmail] = useState('');
 
   // Tab selections for arcade specifications layout
   const [leftTab, setLeftTab] = useState<'simulator' | 'matrix' | 'mission'>('simulator');
@@ -101,61 +94,17 @@ export default function AuthScreen() {
     }
   };
 
-  // Google SSO Handler
-  const handleGoogleJoinClick = () => {
-    setSsoProvider('Google');
-    setSsoMode('choose');
-    setSsoName('');
-    setSsoEmail('');
-    setShowSsoModal(true);
-  };
-
-  // Facebook SSO Handler
-  const handleFacebookJoinClick = () => {
-    setSsoProvider('Facebook');
-    setSsoMode('choose');
-    setSsoName('');
-    setSsoEmail('');
-    setShowSsoModal(true);
-  };
-
-  // Handle OAuth credentials confirmation
-  const handleSsoDirectLogin = async (rawName: string, emailStr: string) => {
+  // Google Sign-In Handler - Direct Google Authentication Pop-up
+  const handleGoogleJoinClick = async () => {
     setLoadingLocal(true);
     setErrorHandled(null);
-    setShowSsoModal(false);
-
-    // Derive proper, direct name from whichever email is chosen to guarantee correctness
-    const cleanEmail = emailStr.toLowerCase().trim();
-    const derivedName = rawName && rawName !== 'Active Player' && rawName !== 'Gamer'
-      ? rawName
-      : getFriendlyNameFromEmail(cleanEmail);
-
     try {
-      const pUrl = ssoProvider === 'Google'
-        ? `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80`
-        : `https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80`;
-
-      await loginWithGoogleMock(
-        derivedName,
-        cleanEmail,
-        pUrl
-      );
+      await loginWithGoogle();
     } catch (err: any) {
-      setErrorHandled(err.message || `${ssoProvider} connection interrupted.`);
+      setErrorHandled(err.message || 'Google authentication interrupted.');
     } finally {
       setLoadingLocal(false);
     }
-  };
-
-  // Custom OAuth Credentials dispatch
-  const handleSsoCustomSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ssoEmail.trim()) return;
-
-    const emailStr = ssoEmail.trim();
-    const finalName = ssoName.trim() || getFriendlyNameFromEmail(emailStr);
-    await handleSsoDirectLogin(finalName, emailStr);
   };
 
   // Forecast values calculator
@@ -554,11 +503,11 @@ export default function AuthScreen() {
 
               {/* PRIMARY ONE-CLICK LOGINS PLACED SENSIVELY AT TOP AS REQUESTED */}
               <div className="flex flex-col gap-3.5 mb-6">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3">
                   <button
                     id="google_sso_btn"
                     onClick={handleGoogleJoinClick}
-                    className="py-3 bg-[#171f30] border border-slate-800 hover:border-slate-700 hover:bg-[#1e2840] rounded-xl text-xs font-bold text-slate-205 transition-all flex items-center justify-center gap-2.5 cursor-pointer shadow-sm hover:scale-[1.01] active:translate-y-[1px]"
+                    className="py-3 bg-[#171f30] border border-slate-800 hover:border-slate-705 hover:bg-[#1e2840] rounded-xl text-xs font-bold text-slate-205 transition-all flex items-center justify-center gap-2.5 cursor-pointer shadow-sm hover:scale-[1.01] active:translate-y-[1px]"
                   >
                     {/* Google Icon Vector */}
                     <svg className="w-4.5 h-4.5 shrink-0" viewBox="0 0 24 24">
@@ -567,18 +516,7 @@ export default function AuthScreen() {
                       <path fill="#fbbc05" d="M5.84 14.53a7.07 7.07 0 0 1 0-5.06V5.92H1.29a11.9 11.9 0 0 0 0 12.16l4.55-3.55z"/>
                       <path fill="#34a853" d="M12 23a11.8 11.8 0 0 0 8.01-2.92l-3.7-2.89a6.9 6.9 0 0 1-9.76-3.66H1.29v3.55A11.9 11.9 0 0 0 12 23z"/>
                     </svg>
-                    Google
-                  </button>
-                  <button
-                    id="facebook_sso_btn"
-                    onClick={handleFacebookJoinClick}
-                    className="py-3 bg-[#1877f2]/10 border border-[#1877f2]/30 hover:border-[#1877f2]/55 hover:bg-[#1877f2]/20 rounded-xl text-xs font-bold text-white transition-all flex items-center justify-center gap-2.5 cursor-pointer shadow-sm hover:scale-[1.01] active:translate-y-[1px]"
-                  >
-                    {/* Facebook Icon Vector */}
-                    <svg className="w-4.5 h-4.5 fill-[#1877f2] shrink-0" viewBox="0 0 24 24">
-                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                    </svg>
-                    Facebook
+                    Continue with Google
                   </button>
                 </div>
 
@@ -681,184 +619,6 @@ export default function AuthScreen() {
         </div>
 
       </div>
-
-      {/* HIGHEST-FIDELITY SSO BRAND MODAL DIALOG (No hardcoded admin names, fully dynamic & beautiful) */}
-      {showSsoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-white border border-slate-200 shadow-2xl rounded-2xl p-6 relative overflow-hidden font-sans text-slate-800 animate-in fade-in zoom-in-95 duration-155">
-            
-            {/* Upper brand line decoration */}
-            <div className={`absolute top-0 inset-x-0 h-1.5 ${ssoProvider === 'Google' ? 'bg-gradient-to-r from-[#ea4335] via-[#fbbc05] to-[#4285f4]' : 'bg-[#1877f2]'}`} />
-
-            {/* Modal header */}
-            <div className="flex items-center justify-between mb-5 mt-2">
-              <div className="flex items-center gap-2.5">
-                {ssoProvider === 'Google' ? (
-                  <svg className="w-6 h-6 shrink-0" viewBox="0 0 24 24">
-                    <path fill="#ea4335" d="M12 5.04c1.61 0 3.05.55 4.19 1.63L19.3 3.6A11.9 11.9 0 0 0 12 1A11.9 11.9 0 0 0 1.29 8h4.55A6.9 6.9 0 0 1 12 5.04z"/>
-                    <path fill="#4285f4" d="M23 12c0-.79-.07-1.54-.19-2.27H12v4.51h6.18a5.29 5.29 0 0 1-2.29 3.47v2.89h3.7A11.9 11.9 0 0 0 23 12z"/>
-                    <path fill="#fbbc05" d="M5.84 14.53a7.07 7.07 0 0 1 0-5.06V5.92H1.29a11.9 11.9 0 0 0 0 12.16l4.55-3.55z"/>
-                    <path fill="#34a853" d="M12 23a11.8 11.8 0 0 0 8.01-2.92l-3.7-2.89a6.9 6.9 0 0 1-9.76-3.66H1.29v3.55A11.9 11.9 0 0 0 12 23z"/>
-                  </svg>
-                ) : (
-                  <svg className="w-6 h-6 fill-[#1877f2] shrink-0" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                  </svg>
-                )}
-                <div>
-                  <h3 className="text-[16px] font-bold text-slate-900 tracking-tight">
-                    Sign in with {ssoProvider}
-                  </h3>
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider font-mono">
-                    to continue to Rewardyn Arcade
-                  </p>
-                </div>
-              </div>
-
-              <span className="text-[9px] bg-slate-100 border border-slate-200 text-slate-600 px-2 py-0.5 rounded font-mono font-bold">
-                API VERIFIED
-              </span>
-            </div>
-
-            {/* Google or Facebook Account selection options */}
-            {ssoMode === 'choose' ? (
-              <div className="flex flex-col gap-2.5 mt-2">
-                <p className="text-xs text-slate-500 leading-normal mb-1">
-                  Choose a verified {ssoProvider} account to synchronize automatically. Your profile is automatically parsed based on your input:
-                </p>
-
-                {/* Account Item 1: Personalized Active Session (Derived dynamically based on user's logged details!) */}
-                <button
-                  onClick={() => handleSsoDirectLogin("Game Rewardyn", "game.rewardyn@gmail.com")}
-                  className="w-full text-left p-3.5 bg-slate-50 hover:bg-slate-100/90 border border-slate-200 hover:border-slate-300 rounded-xl flex items-center justify-between cursor-pointer transition-colors group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-sm border border-emerald-600 shadow-sm">
-                      G
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-emerald-600 transition-colors flex items-center gap-1.5">
-                        Game Rewardyn
-                        <span className="text-[8px] bg-emerald-100 text-emerald-800 border border-emerald-250 px-1 py-0.2 rounded font-mono uppercase font-black">
-                          ACTIVE DEV
-                        </span>
-                      </h4>
-                      <p className="text-[9.5px] text-slate-400 font-mono mt-0.5">game.rewardyn@gmail.com</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-                </button>
-
-                {/* Account Item 2: Ready-made alternative player */}
-                <button
-                  onClick={() => handleSsoDirectLogin("Apex Rider", "apex.rider@gmail.com")}
-                  className="w-full text-left p-3.5 bg-slate-50 hover:bg-slate-100/90 border border-slate-200 hover:border-slate-300 rounded-xl flex items-center justify-between cursor-pointer transition-colors group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-slate-900 text-emerald-400 flex items-center justify-center font-bold text-xs border border-slate-850 shadow-sm">
-                      AR
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-emerald-700 transition-colors">
-                        Apex Rider
-                      </h4>
-                      <p className="text-[9.5px] text-slate-400 font-mono mt-0.5">apex.rider@gmail.com</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-                </button>
-
-                {/* Customize / Set custom account button */}
-                <button
-                  onClick={() => setSsoMode('custom')}
-                  className="w-full p-3.5 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors text-xs font-bold text-slate-700 mt-2 hover:scale-[1.01]"
-                >
-                  <Plus className="w-4 h-4 text-slate-605" />
-                  Use a Custom {ssoProvider} Account Identity
-                </button>
-
-                {/* Cancel Trigger */}
-                <button
-                  type="button"
-                  onClick={() => setShowSsoModal(false)}
-                  className="w-full py-2.5 text-slate-450 hover:text-slate-700 text-xs font-bold rounded-xl transition-colors text-center cursor-pointer mt-3"
-                >
-                  Cancel Sign-In
-                </button>
-              </div>
-            ) : (
-              /* Custom dynamic inputs form inside SSO */
-              <form onSubmit={handleSsoCustomSubmit} className="flex flex-col gap-4 mt-2">
-                <p className="text-xs text-slate-500 leading-normal">
-                  Customize the simulated {ssoProvider} profile values directly. We automatically clean and format names to ensure consistency:
-                </p>
-
-                {/* Custom Name */}
-                <div>
-                  <label className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1.5">
-                    Profile Display Name (Optional)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-450">
-                      <User className="w-4 h-4" />
-                    </span>
-                    <input
-                      type="text"
-                      placeholder="Leave blank to derive from email"
-                      value={ssoName}
-                      onChange={(e) => setSsoName(e.target.value)}
-                      className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-slate-800 focus:bg-white transition-all font-medium"
-                    />
-                  </div>
-                </div>
-
-                {/* Custom Email */}
-                <div>
-                  <label className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1.5 font-sans">
-                    {ssoProvider} Email Address
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-450">
-                      <Mail className="w-4 h-4" />
-                    </span>
-                    <input
-                      required
-                      type="email"
-                      placeholder="e.g. gamer.profile@gmail.com"
-                      value={ssoEmail}
-                      onChange={(e) => setSsoEmail(e.target.value)}
-                      className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-slate-800 focus:bg-white transition-all font-medium"
-                    />
-                  </div>
-                </div>
-
-                {/* Form controls */}
-                <div className="flex gap-2.5 mt-3">
-                  <button
-                    type="button"
-                    onClick={() => setSsoMode('choose')}
-                    className="flex-grow py-3 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:text-slate-900 hover:bg-slate-200 transition-colors border border-slate-200 cursor-pointer text-center uppercase tracking-wider"
-                  >
-                    Back to Selection
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-grow py-3 bg-slate-900 text-white hover:bg-slate-800 font-bold text-xs uppercase rounded-xl tracking-wider transition-colors cursor-pointer border border-transparent"
-                  >
-                    Connect Account
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* Disclaimer */}
-            <div className="mt-5 pt-3 border-t border-slate-100 text-[9px] text-slate-400 text-center leading-normal">
-              OAuth simulated sandbox parses active browser sessions locally without saving cookies outside of local scopes.
-            </div>
-
-          </div>
-        </div>
-      )}
 
     </div>
   );
