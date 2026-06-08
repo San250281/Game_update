@@ -88,7 +88,7 @@ export interface RewardEngineState {
   // Authentications
   loginWithEmail: (email: string, name: string, password?: string) => Promise<UserProfile>;
   loginAsGuest: () => Promise<UserProfile>;
-  loginWithGoogle: (name?: string, email?: string, photoURL?: string) => Promise<UserProfile>;
+  loginWithGoogle: (name?: string, email?: string, photoURL?: string, forceSimulate?: boolean) => Promise<UserProfile>;
   logout: () => Promise<void>;
   
   // Wallet & Transactions
@@ -564,10 +564,10 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     }
   };
 
-  const loginWithGoogle = async (name?: string, email?: string, photoURL?: string) => {
+  const loginWithGoogle = async (name?: string, email?: string, photoURL?: string, forceSimulate: boolean = false) => {
     setLoading(true);
     try {
-      if (isFirebaseLive) {
+      if (isFirebaseLive && !forceSimulate) {
         const result = await loginUserWithGoogle();
         const firebaseUser = result.user;
         let profile = await getUserProfile(firebaseUser.uid);
@@ -610,45 +610,97 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
         return profile;
       }
 
-      // Local sandbox google fallback
+      // Fallback simulation / force Simulate
+      let simUid = '';
+      if (isFirebaseLive) {
+        try {
+          const res = await loginUserAnonymously();
+          simUid = res.user.uid;
+        } catch (anonErr) {
+          console.warn('Simulated anonymous auth failed, using purely local uid:', anonErr);
+          simUid = 'google_local_' + Math.random().toString(36).substring(2, 11);
+        }
+      } else {
+        simUid = 'google_local_' + Math.random().toString(36).substring(2, 11);
+      }
+
       const finalEmail = (email || 'game.rewardyn@gmail.com').trim().toLowerCase();
       const finalName = name || 'Game Rewardyn';
       const finalPhoto = photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${finalEmail}`;
 
-      const existing = allUsers.find(u => u.email.toLowerCase() === finalEmail);
-      if (existing) {
-        if (!existing.isActive) {
-          throw new Error('This user account is banned.');
+      if (isFirebaseLive && !simUid.startsWith('google_local_')) {
+        let profile = await getUserProfile(simUid);
+        if (profile) {
+          if (!profile.isActive) {
+            await signOutUser();
+            throw new Error('This user account is banned.');
+          }
+          profile = {
+            ...profile,
+            photoURL: finalPhoto,
+            name: finalName,
+            lastLogin: new Date().toISOString()
+          };
+          await saveUserProfile(simUid, {
+            name: profile.name,
+            photoURL: profile.photoURL,
+            lastLogin: profile.lastLogin
+          });
+        } else {
+          profile = {
+            uid: simUid,
+            name: finalName,
+            email: finalEmail,
+            photoURL: finalPhoto,
+            provider: ProviderType.GOOGLE,
+            coins: 20,
+            referralCode: generateReferralCode(),
+            createdAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString(),
+            isActive: true,
+            isAdmin: finalEmail === 'game.rewardyn@gmail.com'
+          };
+          await saveUserProfile(simUid, profile);
         }
-        const updated = {
-          ...existing,
-          photoURL: finalPhoto || existing.photoURL,
-          name: finalName || existing.name,
-          lastLogin: new Date().toISOString()
-        };
-        const list = allUsers.map(u => u.uid === existing.uid ? updated : u);
-        setAllUsers(list);
-        localStorage.setItem('rg_users', JSON.stringify(list));
-        setUser(updated);
-        localStorage.setItem('rg_user_session', JSON.stringify(updated));
-        return updated;
-      } else {
-        const newUid = 'google_local_' + Math.random().toString(36).substring(2, 11);
-        const profile: UserProfile = {
-          uid: newUid,
-          name: finalName,
-          email: finalEmail,
-          photoURL: finalPhoto,
-          provider: ProviderType.GOOGLE,
-          coins: 20,
-          referralCode: generateReferralCode(),
-          createdAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
-          isActive: true,
-          isAdmin: finalEmail === 'game.rewardyn@gmail.com'
-        };
-        await registerUserRecord(profile, allUsers);
+        setUser(profile);
+        localStorage.setItem('rg_user_session', JSON.stringify(profile));
         return profile;
+      } else {
+        // Local sandbox google fallback
+        const existing = allUsers.find(u => u.email.toLowerCase() === finalEmail);
+        if (existing) {
+          if (!existing.isActive) {
+            throw new Error('This user account is banned.');
+          }
+          const updated = {
+            ...existing,
+            photoURL: finalPhoto || existing.photoURL,
+            name: finalName || existing.name,
+            lastLogin: new Date().toISOString()
+          };
+          const list = allUsers.map(u => u.uid === existing.uid ? updated : u);
+          setAllUsers(list);
+          localStorage.setItem('rg_users', JSON.stringify(list));
+          setUser(updated);
+          localStorage.setItem('rg_user_session', JSON.stringify(updated));
+          return updated;
+        } else {
+          const profile: UserProfile = {
+            uid: simUid,
+            name: finalName,
+            email: finalEmail,
+            photoURL: finalPhoto,
+            provider: ProviderType.GOOGLE,
+            coins: 20,
+            referralCode: generateReferralCode(),
+            createdAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString(),
+            isActive: true,
+            isAdmin: finalEmail === 'game.rewardyn@gmail.com'
+          };
+          await registerUserRecord(profile, allUsers);
+          return profile;
+        }
       }
     } finally {
       setLoading(false);

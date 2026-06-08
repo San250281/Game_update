@@ -107,7 +107,7 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if isSignedIn(); // Allow profile reading for scoreboard/display search, but email filtering remains protected
-      allow create: if isOwner(uid) && isValidUser(incoming()) && incoming().coins == 0 && incoming().createdAt is string && incoming().createdAt.size() <= 50;
+      allow create: if isOwner(uid) && isValidUser(incoming()) && incoming().coins <= 50 && incoming().createdAt is string && incoming().createdAt.size() <= 50;
       allow update: if (isOwner(uid) || isAdmin()) && isValidUser(incoming())
                      && incoming().uid == existing().uid
                      && incoming().createdAt == existing().createdAt
