@@ -16,14 +16,16 @@ import { motion, AnimatePresence } from 'motion/react';
 export default function AdminPanel() {
   const { 
     allUsers, auditLogs, adminAdjustCoins, adminToggleUserStatus, 
-    adminClearAuditLogs, adminTriggerMockFraud, user 
+    adminClearAuditLogs, adminTriggerMockFraud, user,
+    withdrawalRequests, adminApproveWithdrawal, adminRejectWithdrawal
   } = useRewardEngine();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [adjustAmount, setAdjustAmount] = useState('100');
   const [adjustType, setAdjustType] = useState<'credit' | 'debit'>('credit');
-  const [adminTab, setAdminTab] = useState<'users' | 'fraud' | 'analytics'>('users');
+  const [adminTab, setAdminTab] = useState<'users' | 'withdrawals' | 'fraud' | 'analytics'>('users');
+  const [adminNotes, setAdminNotes] = useState<{ [key: string]: string }>({});
   const [successNotif, setSuccessNotif] = useState<string | null>(null);
 
   // Authenticate Admin level page permissions
@@ -134,7 +136,7 @@ export default function AdminPanel() {
         </div>
 
         {/* Tab Swappers */}
-        <div className="flex bg-slate-100 border border-slate-200 p-0.5 rounded-xl text-xs font-bold gap-0.5">
+        <div className="flex bg-slate-100 border border-slate-200 p-0.5 rounded-xl text-xs font-bold gap-0.5 select-none shrink-0">
           <button
             onClick={() => { setAdminTab('users'); setSelectedUser(null); }}
             className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
@@ -144,13 +146,25 @@ export default function AdminPanel() {
             Players Desk
           </button>
           <button
+            onClick={() => { setAdminTab('withdrawals'); setSelectedUser(null); }}
+            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+              adminTab === 'withdrawals' ? 'bg-white shadow-sm text-slate-900 font-extrabold' : 'text-slate-550 hover:text-slate-900'
+            }`}
+          >
+            Cashouts Review {withdrawalRequests.filter(r => r.status === 'pending').length > 0 && (
+              <span className="bg-amber-600 text-white px-1.5 py-0.2 select-none font-black text-[9px] rounded-full shrink-0">
+                {withdrawalRequests.filter(r => r.status === 'pending').length}
+              </span>
+            )}
+          </button>
+          <button
             onClick={() => { setAdminTab('fraud'); setSelectedUser(null); }}
             className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
               adminTab === 'fraud' ? 'bg-white shadow-sm text-slate-900 font-extrabold' : 'text-slate-550 hover:text-slate-900'
             }`}
           >
             Cyber Fraud {auditLogs.length > 0 && (
-              <span className="bg-rose-500 text-white px-1.5 py-0.2 select-none font-black text-[9px] rounded-full shrink-0">
+              <span className="bg-rose-505 text-white px-1.5 py-0.2 select-none font-black text-[9px] rounded-full shrink-0">
                 {auditLogs.length}
               </span>
             )}
@@ -408,6 +422,146 @@ export default function AdminPanel() {
                   <ShieldAlert className="w-7 h-7 text-slate-400 mb-2" />
                   <span>Select an active profile from the ledger list to make coin adjustments or handle account bans.</span>
                 </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* VIEW: Withdrawal Approvals reviewed by Admins */}
+        {adminTab === 'withdrawals' && (
+          <motion.div
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            className="flex flex-col gap-4 font-sans text-slate-800"
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <Coins className="w-5 h-5 text-amber-500 shrink-0 animate-pulse" />
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest">
+                Pending and Resolved Cash-out Auditing Ledger
+              </h3>
+            </div>
+
+            <div className="flex flex-col gap-3 max-h-[500px] overflow-y-auto pr-1">
+              {withdrawalRequests.length === 0 ? (
+                <div className="text-center py-16 border border-dashed border-slate-200 rounded-3xl text-xs text-slate-400 bg-slate-50">
+                  Perfect! Zero withdrawal request lines registered on ecosystem servers.
+                </div>
+              ) : (
+                withdrawalRequests.map((req) => {
+                  const isPending = req.status === 'pending';
+                  const userAccount = allUsers.find(u => u.uid === req.uid);
+                  const userCoins = userAccount?.coins ?? 0;
+
+                  return (
+                    <div
+                      key={req.requestId}
+                      className={`p-4 border rounded-2xl flex flex-col gap-3 transition-colors ${
+                        isPending 
+                          ? 'bg-amber-50/50 border-amber-200 hover:border-amber-300' 
+                          : 'bg-slate-50 border-slate-200'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5">
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs font-black text-slate-850">
+                              {req.userName}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-medium">({req.userEmail})</span>
+                            
+                            <span className="text-[9px] bg-slate-250 border border-slate-300 rounded px-1.5 py-0.5 text-slate-600 font-mono font-bold">
+                              User Bal: {userCoins.toLocaleString()} Coins
+                            </span>
+                          </div>
+                          
+                          <p className="text-[10px] font-mono text-slate-400 mt-1">
+                            Req ID: {req.requestId} • Created: {new Date(req.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+
+                        <div className="text-right sm:self-start">
+                          <span className={`text-[9.5px] font-black uppercase px-2 py-0.5 rounded-lg border leading-none ${
+                            req.status === 'pending' ? 'bg-amber-150 text-amber-800 border-amber-300' :
+                            req.status === 'approved' ? 'bg-emerald-100/70 text-emerald-800 border-emerald-300 animate-pulse' :
+                            'bg-red-50 text-red-650 border-red-200'
+                          }`}>
+                            {req.status}
+                          </span>
+                          <h4 className="text-sm font-black text-slate-900 mt-1.5">
+                            {req.amountCoins.toLocaleString()} Coins (${(req.amountCoins / 1000).toFixed(2)})
+                          </h4>
+                        </div>
+                      </div>
+
+                      {/* Payment Address Box */}
+                      <div className="bg-white/95 p-2.5 rounded-xl border border-slate-210 text-xs font-mono text-slate-700 select-all truncate">
+                        <span className="font-extrabold text-slate-450 uppercase text-[9px] mr-1.5">Payout Target:</span>
+                        {req.paymentMethod} • {req.paymentDetails}
+                      </div>
+
+                      {/* Action forms for review of pending payout tickets */}
+                      {isPending ? (
+                        <div className="bg-white border border-amber-200 p-3 rounded-xl flex flex-col gap-2">
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-0.5">
+                            Administrator audit review note (reasons, codes, references)
+                          </label>
+                          
+                          <div className="flex flex-col sm:flex-row gap-2.5">
+                            <input
+                              type="text"
+                              placeholder="Review note (e.g. PayPal Transaction ID: FX-183 or Rejection: flag anomaly fraud detected)"
+                              value={adminNotes[req.requestId] || ''}
+                              onChange={(e) => setAdminNotes({
+                                ...adminNotes,
+                                [req.requestId]: e.target.value
+                              })}
+                              className="flex-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-medium focus:outline-none focus:border-amber-400"
+                            />
+
+                            <div className="flex gap-2 shrink-0">
+                              <button
+                                onClick={async () => {
+                                  await adminApproveWithdrawal(req.requestId, adminNotes[req.requestId]);
+                                  setSuccessNotif(`Approved withdrawal request to ${req.userName}! Successfully debited points.`);
+                                  setTimeout(() => setSuccessNotif(null), 3500);
+                                }}
+                                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-extrabold uppercase tracking-wide cursor-pointer flex items-center gap-1"
+                              >
+                                Approve
+                              </button>
+                              
+                              <button
+                                onClick={async () => {
+                                  await adminRejectWithdrawal(req.requestId, adminNotes[req.requestId]);
+                                  setSuccessNotif(`Rejected cash-out request from ${req.userName}. Refund intact.`);
+                                  setTimeout(() => setSuccessNotif(null), 3500);
+                                }}
+                                className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-extrabold uppercase tracking-wide cursor-pointer flex items-center gap-1"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        req.adminMessage && (
+                          <div className={`p-2.5 rounded-xl border text-[11px] leading-relaxed flex gap-1.5 ${
+                            req.status === 'approved' ? 'bg-emerald-50 border-emerald-100 text-emerald-850' : 'bg-red-50 border-red-100 text-red-800'
+                          }`}>
+                            <span className="font-extrabold uppercase tracking-wider shrink-0">Admin Log:</span>
+                            <span>{req.adminMessage}</span>
+                            {req.processedAt && (
+                              <span className="text-[10px] text-slate-400 font-mono font-medium ml-auto">
+                                {new Date(req.processedAt).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        )
+                      )}
+                    </div>
+                  );
+                })
               )}
             </div>
           </motion.div>

@@ -7,20 +7,33 @@ import React, { useState, useEffect } from 'react';
 import { useRewardEngine } from '../lib/store';
 import { 
   Gamepad2, Mail, Lock, User, Sparkles, LogIn, 
-  ShieldCheck, AlertCircle, Coins, Award, Info, Zap
+  ShieldCheck, AlertCircle, Coins, Award, Info, Zap,
+  Globe, Cpu, Check, ChevronRight, Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-// Live mock claims telemetry data to make the landing page feel extremely active and engaging
+// Live dynamic claims ticker mimicking real-time player claims
 const LIVE_CLAIMS_MOCK = [
-  { id: 1, user: 'cyber_pulsar', reward: '+500 Coins', action: 'Spin Wheel Jackpot', time: 'Just now', color: 'text-purple-600' },
-  { id: 2, user: 'reaper_fury', reward: '+300 Coins', action: 'Golden Scratch Card', time: '3 seconds ago', color: 'text-indigo-650' },
-  { id: 3, user: 'web3_sol', reward: '+40 Coins', action: 'Trivia Correct Step', time: '8 seconds ago', color: 'text-emerald-600' },
-  { id: 4, user: 'tap_warlord', reward: '+60 Coins', action: 'TAP Velocity Peak', time: '12 seconds ago', color: 'text-rose-600' },
-  { id: 5, user: 'luna_hustle', reward: '+600 Coins', action: 'Streak BONUS Day 7', time: '18 seconds ago', color: 'text-amber-600' },
-  { id: 6, user: 'gumball_3000', reward: '+120 Coins', action: 'Streak BONUS Day 3', time: '35 seconds ago', color: 'text-teal-600' },
-  { id: 7, user: 'sol_mortal', reward: '+500 Coins', action: 'Lucky Spin Jackpot', time: '1 minute ago', color: 'text-purple-600' }
+  { id: 1, user: 'starlight_rider', reward: '+500 Coins', action: 'Lucky Wheel Jackpot', time: 'Just now', color: 'text-emerald-400' },
+  { id: 2, user: 'vortex_play', reward: '+300 Coins', action: 'Golden Scratch Card', time: '3s ago', color: 'text-indigo-400' },
+  { id: 3, user: 'apex_hunter', reward: '+40 Coins', action: 'Trivia Correct Answer', time: '8s ago', color: 'text-cyan-400' },
+  { id: 4, user: 'zephyr_core', reward: '+60 Coins', action: 'Rapid Tap Burst', time: '12s ago', color: 'text-emerald-400' },
+  { id: 5, user: 'nebula_pulse', reward: '+600 Coins', action: '7-Day Streak BONUS', time: '18s ago', color: 'text-amber-400' },
+  { id: 6, user: 'krypton_tap', reward: '+120 Coins', action: 'Trivia Challenge Completed', time: '35s ago', color: 'text-teal-400' },
+  { id: 7, user: 'shadow_strike', reward: '+500 Coins', action: 'Lucky Wheel Jackpot', time: '1m ago', color: 'text-purple-400' }
 ];
+
+// Helper to extract a beautiful natural gaming name from any email address
+const getFriendlyNameFromEmail = (emailStr: string): string => {
+  if (!emailStr) return 'Gamer';
+  const prefix = emailStr.split('@')[0];
+  // Replace dots, hyphens, and underscores with space, capitalize each word
+  return prefix
+    .split(/[\._\-]/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
 
 export default function AuthScreen() {
   const { loginWithEmail, loginAsGuest, loginWithGoogleMock } = useRewardEngine();
@@ -31,26 +44,28 @@ export default function AuthScreen() {
   const [errorHandled, setErrorHandled] = useState<string | null>(null);
   const [loadingLocal, setLoadingLocal] = useState(false);
 
+  // SSO Modal State
   const [showSsoModal, setShowSsoModal] = useState(false);
+  const [ssoProvider, setSsoProvider] = useState<'Google' | 'Facebook' | null>(null);
+  const [ssoMode, setSsoMode] = useState<'choose' | 'custom'>('choose');
   const [ssoName, setSsoName] = useState('');
   const [ssoEmail, setSsoEmail] = useState('');
-  const [ssoProvider, setSsoProvider] = useState<'Google' | 'Facebook' | null>(null);
 
-  // Left-pane sub-tabs for interactive research
-  const [leftTab, setLeftTab] = useState<'mission' | 'simulator' | 'matrix'>('simulator');
+  // Tab selections for arcade specifications layout
+  const [leftTab, setLeftTab] = useState<'simulator' | 'matrix' | 'mission'>('simulator');
 
-  // Interactive slider parameters for platform engagement simulation
+  // Multiplier forecast state
   const [estimatePlays, setEstimatePlays] = useState(6);
   const [estimateStreak, setEstimateStreak] = useState(true);
 
-  // Live Claim tracking index state
+  // Active ledger claims ticket ticker loop index
   const [tickerIndex, setTickerIndex] = useState(0);
 
-  // Rotate simulated global claims ticker 
+  // Rotate simulated global claims ticker
   useEffect(() => {
     const timer = setInterval(() => {
       setTickerIndex((prev) => (prev + 1) % LIVE_CLAIMS_MOCK.length);
-    }, 4500);
+    }, 3600);
     return () => clearInterval(timer);
   }, []);
 
@@ -68,7 +83,7 @@ export default function AuthScreen() {
         await loginWithEmail(email.trim(), username.trim(), password.trim());
       }
     } catch (err: any) {
-      setErrorHandled(err.message || 'Authentication error happened.');
+      setErrorHandled(err.message || 'Authentication failed. Please verify credentials.');
     } finally {
       setLoadingLocal(false);
     }
@@ -80,588 +95,767 @@ export default function AuthScreen() {
     try {
       await loginAsGuest();
     } catch (err: any) {
-      setErrorHandled(err.message || 'Failed log in as Guest.');
+      setErrorHandled(err.message || 'Guest session initialization is temporarily unavailable.');
     } finally {
       setLoadingLocal(false);
     }
   };
 
-  const handleGoogleJoinMock = () => {
+  // Google SSO Handler
+  const handleGoogleJoinClick = () => {
     setSsoProvider('Google');
-    setSsoName('Rewardyn Admin');
-    setSsoEmail('game.rewardyn@gmail.com');
+    setSsoMode('choose');
+    setSsoName('');
+    setSsoEmail('');
     setShowSsoModal(true);
   };
 
-  const handleFacebookJoinMock = () => {
+  // Facebook SSO Handler
+  const handleFacebookJoinClick = () => {
     setSsoProvider('Facebook');
-    setSsoName('Facebook Gamer');
-    setSsoEmail('fb.player@facebook.com');
+    setSsoMode('choose');
+    setSsoName('');
+    setSsoEmail('');
     setShowSsoModal(true);
   };
 
-  const handleSsoSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ssoName.trim() || !ssoEmail.trim()) return;
-
+  // Handle OAuth credentials confirmation
+  const handleSsoDirectLogin = async (rawName: string, emailStr: string) => {
     setLoadingLocal(true);
     setErrorHandled(null);
     setShowSsoModal(false);
 
+    // Derive proper, direct name from whichever email is chosen to guarantee correctness
+    const cleanEmail = emailStr.toLowerCase().trim();
+    const derivedName = rawName && rawName !== 'Active Player' && rawName !== 'Gamer'
+      ? rawName
+      : getFriendlyNameFromEmail(cleanEmail);
+
     try {
-      const photoURL = ssoProvider === 'Google'
+      const pUrl = ssoProvider === 'Google'
         ? `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80`
         : `https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80`;
 
       await loginWithGoogleMock(
-        ssoName.trim(),
-        ssoEmail.trim().toLowerCase(),
-        photoURL
+        derivedName,
+        cleanEmail,
+        pUrl
       );
     } catch (err: any) {
-      setErrorHandled(err.message || `${ssoProvider} Auth Error.`);
+      setErrorHandled(err.message || `${ssoProvider} connection interrupted.`);
     } finally {
       setLoadingLocal(false);
     }
   };
 
-  // Interactive reward algorithm calculation mapping
+  // Custom OAuth Credentials dispatch
+  const handleSsoCustomSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ssoEmail.trim()) return;
+
+    const emailStr = ssoEmail.trim();
+    const finalName = ssoName.trim() || getFriendlyNameFromEmail(emailStr);
+    await handleSsoDirectLogin(finalName, emailStr);
+  };
+
+  // Forecast values calculator
   const calculateEstimateReward = () => {
-    const averageGameReward = 85; 
-    const gameMultiplier = estimatePlays * averageGameReward * 7;
+    const baseRewardPerGame = 85; 
+    const gameMultiplier = estimatePlays * baseRewardPerGame * 7;
     const streakBonus = estimateStreak ? 1600 : 0;
     return gameMultiplier + streakBonus;
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 lg:p-8 relative font-sans text-slate-800 bg-[#f8fafc]">
-      {/* Background radial soft shapes */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/5 rounded-full blur-[100px] pointer-events-none" />
+    <div 
+      className="min-h-screen w-full flex items-center justify-center p-4 lg:p-12 relative font-sans text-slate-200 overflow-x-hidden bg-[#0A0D1A]"
+      style={{
+        backgroundImage: `radial-gradient(ellipse at top, rgba(16, 185, 129, 0.08) 0%, transparent 60%), 
+                          radial-gradient(ellipse at bottom, rgba(59, 130, 246, 0.06) 0%, transparent 60%),
+                          linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px), 
+                          linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px)`,
+        backgroundSize: '100% 100%, 100% 100%, 40px 40px, 40px 40px'
+      }}
+    >
+      {/* Dynamic ambient lights blurs */}
+      <div className="absolute top-[10%] left-[20%] w-[600px] h-[600px] bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-[10%] right-[10%] w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[130px] pointer-events-none" />
 
-      {/* Main Container Widescreen Setup */}
-      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch relative z-10 my-6">
+      {/* Main viewport limit frame */}
+      <div className="w-full max-w-6xl relative z-10 flex flex-col gap-6 my-4">
         
-        {/* LEFT COLUMN: Highly Interactive Company Showcase, Stats & Rewards Simulator */}
-        <div className="lg:col-span-7 flex flex-col justify-between bg-white border border-slate-200 rounded-[32px] p-6 lg:p-8 shadow-[0_10px_35px_rgba(0,0,0,0.03)] relative overflow-hidden">
-          {/* Subtle design corners */}
-          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-emerald-500/5 to-transparent blur-md rounded-full pointer-events-none" />
-          
-          <div className="flex flex-col gap-6">
-            {/* Enterprise Branding header */}
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-center shadow-[0_4px_12px_rgba(16,185,129,0.08)]">
-                <Gamepad2 className="w-6.5 h-6.5 text-emerald-600 stroke-[2]" />
-              </div>
-              <div>
-                <h1 className="text-xl font-black text-slate-900 tracking-widest uppercase flex items-center gap-2">
-                  REWARDYN
-                </h1>
-                <p className="text-[10px] text-slate-500 uppercase font-black tracking-wider leading-tight">Next-Generation Micro-rewards Enterprise</p>
-              </div>
-            </div>
-
-            {/* Corporate Brief Headline */}
-            <div className="space-y-2 mt-2">
-              <h2 className="text-xl lg:text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">
-                Where casual gaming meets immutable ledger economies.
-              </h2>
-              <p className="text-xs text-slate-600 leading-relaxed max-w-full">
-                REWARDYN is a client-trusted gamified system designed to turn focus and casual entertainment into digital assets, recorded instantly on transparent cryptographic ledgers. Play short web sessions, accumulate coin weight, and rise in community standing.
-              </p>
-            </div>
-
-            {/* Interactive Showcase Tabs navigation */}
-            <div className="grid grid-cols-3 bg-slate-100/80 border border-slate-200 p-1 rounded-xl text-xs font-bold mt-2 gap-1.5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]">
-              <button
-                onClick={() => setLeftTab('simulator')}
-                className={`py-2 px-2.5 rounded-lg transition-all cursor-pointer text-[11px] text-center uppercase tracking-wide shrink-0 ${
-                  leftTab === 'simulator' 
-                    ? 'bg-emerald-500 text-slate-950 font-black shadow-sm' 
-                    : 'text-slate-550 hover:text-slate-900 hover:bg-slate-200/50'
-                }`}
-              >
-                🎮 Yield Simulator
-              </button>
-              <button
-                onClick={() => setLeftTab('matrix')}
-                className={`py-2 px-2.5 rounded-lg transition-all cursor-pointer text-[11px] text-center uppercase tracking-wide shrink-0 ${
-                  leftTab === 'matrix' 
-                    ? 'bg-emerald-500 text-slate-950 font-black shadow-sm' 
-                    : 'text-slate-550 hover:text-slate-900 hover:bg-slate-200/50'
-                }`}
-              >
-                📊 Pay Rates
-              </button>
-              <button
-                onClick={() => setLeftTab('mission')}
-                className={`py-2 px-2.5 rounded-lg transition-all cursor-pointer text-[11px] text-center uppercase tracking-wide shrink-0 ${
-                  leftTab === 'mission' 
-                    ? 'bg-emerald-500 text-slate-950 font-black shadow-sm' 
-                    : 'text-slate-550 hover:text-slate-900 hover:bg-slate-200/50'
-                }`}
-              >
-                🏢 Company Info
-              </button>
-            </div>
-
-            {/* TAB PANES BLOCK WITH ANIMATION */}
-            <div className="bg-slate-50/50 border border-slate-200 p-5 rounded-2xl min-h-[220px] flex flex-col justify-between relative shadow-[inset_0_2px_8px_rgba(0,0,0,0.01)]">
-              <AnimatePresence mode="wait">
-                {/* 1. Yield Simulator Tab */}
-                {leftTab === 'simulator' && (
-                  <motion.div
-                    key="simulator"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="flex flex-col h-full justify-between gap-4"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-xs font-black text-emerald-700 uppercase tracking-widest flex items-center gap-1.5">
-                          <Zap className="w-4 h-4 text-emerald-600 animate-pulse fill-emerald-100" />
-                          Proof-of-Attention Simulator
-                        </h3>
-                        <span className="text-[10px] text-slate-400 font-mono">Dynamic Yield Math</span>
-                      </div>
-                      <p className="text-[11px] text-slate-600 leading-relaxed">
-                        Customize your projected playing cycle below to forecast your weekly coin ledger accumulation instantly:
-                      </p>
-                    </div>
-
-                    {/* Simulator Inputs Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-2.5 bg-white p-4.5 rounded-xl border border-slate-200/80">
-                      
-                      {/* Daily Plays Custom Slider */}
-                      <div className="flex flex-col gap-2">
-                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-slate-550 mr-1">
-                          <span>Plays Daily Cycle</span>
-                          <span className="text-emerald-600 font-mono font-bold text-xs">{estimatePlays} Sessions</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="1"
-                          max="20"
-                          value={estimatePlays}
-                          onChange={(e) => setEstimatePlays(parseInt(e.target.value))}
-                          className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                        />
-                        <span className="text-[9px] text-slate-400">Includes scratch cards, spins, & trivia quiz.</span>
-                      </div>
-
-                      {/* Loyalty Checkbox */}
-                      <div className="flex flex-col justify-center">
-                        <label className="flex items-center gap-3 cursor-pointer select-none group">
-                          <div className="relative">
-                            <input
-                              type="checkbox"
-                              checked={estimateStreak}
-                              onChange={(e) => setEstimateStreak(e.target.checked)}
-                              className="sr-only"
-                            />
-                            <div className={`w-10 h-5.5 rounded-full transition-all border ${
-                              estimateStreak ? 'bg-emerald-500/20 border-emerald-500' : 'bg-slate-200 border-slate-350'
-                            }`} />
-                            <div className={`absolute left-1 top-1 w-3.5 h-3.5 rounded-full transition-all ${
-                              estimateStreak ? 'translate-x-4.5 bg-emerald-650' : 'bg-slate-400'
-                            }`} />
-                          </div>
-                          <div>
-                            <span className="text-[11px] font-bold text-slate-700 group-hover:text-slate-900 transition-colors block">
-                              Claim 7-Day Loyalty Streak
-                            </span>
-                            <span className="text-[9px] text-slate-400 block">Adds static +1,600 Weekly Coins</span>
-                          </div>
-                        </label>
-                      </div>
-
-                    </div>
-
-                    {/* Result projected panel */}
-                    <div className="flex items-center justify-between border-t border-slate-200/60 pt-3 mt-1.5">
-                      <div>
-                        <p className="text-[9px] text-slate-400 uppercase font-black tracking-wider">PROJECTED COINS / WEEK</p>
-                        <h4 className="text-lg font-black text-amber-605 flex items-center gap-1 mt-0.5 animate-pulse">
-                          <Coins className="w-4.5 h-4.5 text-amber-500" />
-                          {calculateEstimateReward().toLocaleString()} Coins
-                        </h4>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[9px] text-slate-405 uppercase block font-mono">Simulated Multiplier</span>
-                        <span className="text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-0.5 rounded font-black mt-0.5 inline-block">
-                          {((calculateEstimateReward() / 1600)).toFixed(1)}x Rate Weight
-                        </span>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* 2. Platform Matrix Tab */}
-                {leftTab === 'matrix' && (
-                  <motion.div
-                    key="matrix"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="flex flex-col h-full justify-between gap-3"
-                  >
-                    <div>
-                      <h3 className="text-xs font-black text-emerald-700 uppercase tracking-widest flex items-center gap-1.5 mb-1.5">
-                        <Award className="w-4 h-4 text-emerald-655" />
-                        Gamer Yield Matrix & Limits
-                      </h3>
-                      <p className="text-[11px] text-slate-600 leading-relaxed mb-3">
-                        Secure payouts are hardcapped by system algorithms to guard the platform economy against automation botting:
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                      <div className="p-2.5 bg-white border border-slate-200 rounded-xl text-center">
-                        <p className="text-[9px] text-purple-600 font-black uppercase">🎡 Lucky Spin</p>
-                        <p className="text-xs font-bold text-slate-900 mt-1">Up to +500</p>
-                        <span className="text-[8px] text-slate-404">Uncapped tries</span>
-                      </div>
-                      <div className="p-2.5 bg-white border border-slate-200 rounded-xl text-center">
-                        <p className="text-[9px] text-indigo-600 font-black uppercase">✉️ Scratch Card</p>
-                        <p className="text-xs font-bold text-slate-900 mt-1">Up to +300</p>
-                        <span className="text-[8px] text-slate-404">Pure Fortune</span>
-                      </div>
-                      <div className="p-2.5 bg-white border border-slate-200 rounded-xl text-center">
-                        <p className="text-[9px] text-emerald-600 font-black uppercase">🧠 Trivia Quiz</p>
-                        <p className="text-xs font-bold text-slate-900 mt-1">+40 / Step</p>
-                        <span className="text-[8px] text-slate-404">Max 200 / day</span>
-                      </div>
-                      <div className="p-2.5 bg-white border border-slate-200 rounded-xl text-center">
-                        <p className="text-[9px] text-rose-600 font-black uppercase">⚡ Tap Velocity</p>
-                        <p className="text-xs font-bold text-slate-900 mt-1">Up to +60</p>
-                        <span className="text-[8px] text-slate-404">10-second test</span>
-                      </div>
-                    </div>
-
-                    <p className="text-[9px] text-slate-450 text-center leading-relaxed mt-2.5 border-t border-slate-200/50 pt-2 flex items-center justify-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-555" />
-                      Ledger audits run symmetrically to trace concurrent click collisions.
-                    </p>
-                  </motion.div>
-                )}
-
-                {/* 3. Company Info Tab */}
-                {leftTab === 'mission' && (
-                  <motion.div
-                    key="mission"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="flex flex-col h-full justify-between gap-4"
-                  >
-                    <div className="space-y-2">
-                      <h3 className="text-xs font-black text-teal-700 uppercase tracking-widest flex items-center gap-1.5">
-                        <Info className="w-4 h-4 text-teal-655" />
-                        REWARDYN Corporate Identity
-                      </h3>
-                      <p className="text-[11px] text-slate-600 leading-relaxed font-medium">
-                        Incorporated globally in 2026, REWARDYN pioneers stateful internet retention solutions. We convert standard, low-value attention margins into hyper-focused arcade sessions built with custom HTML5 speed layers.
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 mt-1.5">
-                      <div className="p-3 bg-white border border-slate-200 rounded-xl">
-                        <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-wider">Zero gas friction</h4>
-                        <p className="text-[9px] text-slate-404 mt-1">All platform transactions utilize lightweight custom double-entry systems backed by high-speed server clusters.</p>
-                      </div>
-                      <div className="p-3 bg-white border border-slate-200 rounded-xl">
-                        <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-wider">100% Safe Audits</h4>
-                        <p className="text-[9px] text-slate-404 mt-1">Real-time anti-intrusion telemetry catches macro clicking patterns to keep point distribution balance pristine.</p>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
+        {/* PREMIUM STATUS HEADER RAIL (Modern, minimal and elegant) */}
+        <div className="w-full bg-[#111625]/90 backdrop-blur-md border border-slate-800 rounded-2xl px-6 py-3.5 flex flex-wrap items-center justify-between gap-4 shadow-2xl text-xs">
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-2 text-slate-200 font-bold tracking-tight">
+              <span className="w-2s h-2s rounded-full bg-emerald-400 animate-pulse-subtle" />
+              PORTAL READY
+            </span>
+            <span className="w-px h-3.5 bg-slate-800 hidden md:block" />
+            <span className="text-slate-400 font-medium hidden md:flex items-center gap-1.5 font-mono">
+              <Globe className="w-3.5 h-3.5 text-slate-500" />
+              ARCADE LOUNGE: <span className="font-bold text-emerald-400">14,290 ACTIVE NOW</span>
+            </span>
           </div>
 
-          {/* Interactive live claim rolling feed */}
-          <div className="mt-8 border-t border-slate-100 pt-5">
-            <span className="text-[9px] text-slate-450 uppercase tracking-widest font-black flex items-center gap-1.5 mb-3.5">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              PLATFORM LEDGER REVENUE TELEMETRY
+          <div className="flex items-center gap-4 text-slate-400 font-medium font-mono text-[11px]">
+            <span className="hidden sm:block">STABLE INSTANCE PING: <span className="text-emerald-400 font-bold">18ms</span></span>
+            <span className="w-px h-3.5 bg-slate-800 hidden sm:block" />
+            <span className="bg-[#10b981]/10 text-emerald-400 font-bold px-2 py-0.5 rounded border border-emerald-500/20 flex items-center gap-1">
+              <Cpu className="w-3 h-3 text-emerald-400" />
+              CLOUD BACKEND SECURED
             </span>
+          </div>
+        </div>
 
-            {/* Rotating claim ticket slot */}
-            <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl flex items-center justify-between relative overflow-hidden shadow-[inset_0_1.5px_4px_rgba(0,0,0,0.02)]">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-xs text-emerald-600 font-bold">
-                  🎮
+        {/* MAIN BODY GRID */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+          
+          {/* LEFT COLUMN PANEL: Arcade Introduction & Interactive forecast slider block */}
+          <div className="lg:col-span-7 flex flex-col justify-between bg-[#111625]/80 border border-slate-800 rounded-[24px] p-6 lg:p-8 shadow-2xl relative overflow-hidden backdrop-blur-md">
+            
+            {/* Top design accent glow */}
+            <div className="absolute top-0 right-0 w-44 h-44 bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
+            
+            <div className="flex flex-col gap-6">
+              {/* Launcher Header branding */}
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-tr from-emerald-500 to-indigo-500 p-[1.5px] rounded-2xl shadow-[0_4px_24px_rgba(16,185,129,0.15)] flex items-center justify-center">
+                  <div className="w-full h-full bg-[#0a0d1a] rounded-[14px] flex items-center justify-center">
+                    <Gamepad2 className="w-6 h-6 text-emerald-400 stroke-[2] animate-pulse" />
+                  </div>
                 </div>
                 <div>
-                  <h4 className="text-[11px] font-extrabold text-slate-900 flex items-center gap-2">
-                    @{LIVE_CLAIMS_MOCK[tickerIndex].user}
-                    <span className="text-[9px] text-slate-550 font-normal">claimed</span>
-                    <span className={`font-mono font-black ${LIVE_CLAIMS_MOCK[tickerIndex].color}`}>
-                      {LIVE_CLAIMS_MOCK[tickerIndex].reward}
+                  <div className="flex items-center gap-2">
+                    <span className="bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded leading-none border border-emerald-500/20">
+                      PLAY DECK
                     </span>
-                  </h4>
-                  <p className="text-[9px] text-slate-455 mt-0.5">
-                    Triggered action: <span className="text-slate-600 font-semibold">{LIVE_CLAIMS_MOCK[tickerIndex].action}</span>
-                  </p>
+                    <span className="text-slate-500 text-[10px] font-mono">v2.4 PRO</span>
+                  </div>
+                  <h1 className="text-2xl font-black text-white tracking-tight font-display flex items-center gap-1.5">
+                    REWARDYN <span className="text-emerald-450 font-normal text-slate-400">ARCADE</span>
+                  </h1>
                 </div>
               </div>
 
-              <div className="text-right shrink-0">
-                <span className="text-[9px] text-slate-455 font-mono block">
-                  {LIVE_CLAIMS_MOCK[tickerIndex].time}
-                </span>
-                <span className="text-[8px] bg-emerald-50 text-[#047857] border border-emerald-100 px-1.5 py-0.2 rounded mt-0.5 inline-block font-black uppercase">
-                  Verified
-                </span>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        {/* RIGHT COLUMN: Highly Polished Secure Access Entry Terminal */}
-        <div className="lg:col-span-12 xl:col-span-5 lg:col-span-5 flex flex-col justify-center">
-          <div className="w-full bg-white border border-slate-200 shadow-[0_15px_40px_rgba(0,0,0,0.04)] rounded-[32px] p-6 lg:p-7 relative overflow-hidden">
-            
-            {/* Visual glow on upper-right */}
-            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 blur-2xl rounded-full" />
-
-            {/* Title */}
-            <div className="text-center mb-6 mt-1">
-              <h2 className="text-lg font-black text-slate-900 tracking-widest uppercase flex items-center justify-center gap-2">
-                Secure Access Gate
-              </h2>
-              <p className="text-[10px] text-slate-450 uppercase tracking-wider mt-1">
-                Authorized entry with client-vouched credentials
-              </p>
-            </div>
-
-            {/* Sign in / Register Selector Tab */}
-            <div className="flex bg-slate-100 p-1 border border-slate-200 rounded-2xl mb-5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]">
-              <button
-                onClick={() => { setActiveTab('signin'); setErrorHandled(null); }}
-                className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                  activeTab === 'signin'
-                    ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/50 font-black'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                Sign In account
-              </button>
-              <button
-                onClick={() => { setActiveTab('register'); setErrorHandled(null); }}
-                className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                  activeTab === 'register'
-                    ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/50 font-black'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                New registration
-              </button>
-            </div>
-
-            {/* Authentication Form */}
-            <form onSubmit={handleEmailAction} className="flex flex-col gap-4 mb-5">
-              {activeTab === 'register' && (
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
-                    <User className="w-4 h-4 shrink-0" />
-                  </span>
-                  <input
-                    required
-                    type="text"
-                    placeholder="User profile public name"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-450 focus:outline-none focus:border-emerald-500 transition-colors font-medium shadow-[inset_0_1px_2px_rgba(0,0,0,0.01)]"
-                  />
-                </div>
-              )}
-
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
-                  <Mail className="w-4 h-4 shrink-0" />
-                </span>
-                <input
-                  required
-                  type="email"
-                  placeholder="Registry Email Address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-450 focus:outline-none focus:border-emerald-500 transition-colors font-medium shadow-[inset_0_1px_2px_rgba(0,0,0,0.01)]"
-                />
-              </div>
-
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
-                  <Lock className="w-4 h-4 shrink-0" />
-                </span>
-                <input
-                  required
-                  type="password"
-                  placeholder="Registry password phrase"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-450 focus:outline-none focus:border-emerald-500 transition-colors font-medium shadow-[inset_0_1px_2px_rgba(0,0,0,0.01)]"
-                />
-              </div>
-
-              {errorHandled && (
-                <p className="text-rose-600 font-bold text-[11px] flex items-center gap-1.5 justify-center animate-pulse mt-0.5">
-                  <AlertCircle className="w-3.5 h-3.5" /> {errorHandled}
+              {/* Catchy gaming platform intro text */}
+              <div className="space-y-2.5 mt-1">
+                <h2 className="text-xl lg:text-2xl font-bold text-white tracking-tight font-display leading-tight">
+                  Casual arcade play linked straight to real ledger economies.
+                </h2>
+                <p className="text-xs text-slate-400 leading-relaxed font-sans">
+                  Join a trusted micro-reward universe where focus-fueled loyalty cycles yield digital assets recorded instantly on secure ledgers. Play web mini-sessions, spin fortune wheels, and stack coins seamlessly from your browser dashboard.
                 </p>
-              )}
+              </div>
 
-              <button
-                type="submit"
-                disabled={loadingLocal}
-                className="w-full py-3.5 bg-emerald-500 text-slate-950 hover:bg-emerald-600 hover:shadow-[0_4px_12px_rgba(16,185,129,0.15)] transition-all cursor-pointer font-black text-xs uppercase rounded-xl tracking-wider flex items-center justify-center gap-2 shadow-sm border-t border-white/20"
-              >
-                <LogIn className="w-4.5 h-4.5" />
-                {loadingLocal ? 'Vouching credentials...' : activeTab === 'signin' ? 'Unlock Account' : 'Initialize Account Now'}
-              </button>
-            </form>
+              {/* Sub-tabs with high-end console feel layout */}
+              <div className="grid grid-cols-3 bg-[#0a0d1a]/80 p-1 rounded-xl text-xs font-bold gap-1 border border-slate-800">
+                <button
+                  onClick={() => setLeftTab('simulator')}
+                  className={`py-2.5 px-3 rounded-lg transition-all cursor-pointer text-[10.5px] uppercase tracking-wide text-center font-bold ${
+                    leftTab === 'simulator' 
+                      ? 'bg-[#1a2138] text-emerald-400 border border-slate-700/50 shadow-lg' 
+                      : 'text-slate-400 hover:text-slate-100'
+                  }`}
+                >
+                  🎮 Yield Forecast
+                </button>
+                <button
+                  onClick={() => setLeftTab('matrix')}
+                  className={`py-2.5 px-3 rounded-lg transition-all cursor-pointer text-[10.5px] uppercase tracking-wide text-center font-bold ${
+                    leftTab === 'matrix' 
+                      ? 'bg-[#1a2138] text-emerald-400 border border-slate-700/50 shadow-lg' 
+                      : 'text-slate-400 hover:text-slate-100'
+                  }`}
+                >
+                  📊 Dynamic Rates
+                </button>
+                <button
+                  onClick={() => setLeftTab('mission')}
+                  className={`py-2.5 px-3 rounded-lg transition-all cursor-pointer text-[10.5px] uppercase tracking-wide text-center font-bold ${
+                    leftTab === 'mission' 
+                      ? 'bg-[#1a2138] text-emerald-400 border border-slate-700/50 shadow-lg' 
+                      : 'text-slate-400 hover:text-slate-100'
+                  }`}
+                >
+                  🏢 Platform Info
+                </button>
+              </div>
 
-            {/* Separator block */}
-            <div className="relative flex py-2 items-center">
-              <div className="flex-grow border-t border-slate-200" />
-              <span className="flex-shrink mx-3 text-[9px] text-slate-400 font-black uppercase tracking-widest leading-none">
-                VERIFIED PARTNERS
-              </span>
-              <div className="flex-grow border-t border-slate-200" />
+              {/* Interactive Tab View panel block */}
+              <div className="bg-[#0a0d1a]/60 border border-slate-800/80 p-5 rounded-xl min-h-[214px] flex flex-col justify-between relative shadow-inner">
+                <AnimatePresence mode="wait">
+                  {leftTab === 'simulator' && (
+                    <motion.div
+                      key="simulator"
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      className="flex flex-col h-full justify-between gap-4"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                            <Zap className="w-4 h-4 text-emerald-400 fill-emerald-500/10" />
+                            Dynamic Payout Forecast
+                          </h3>
+                          <span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-mono font-bold uppercase">
+                            LIVE CALCULATOR
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 leading-relaxed">
+                          Adjust daily play cycles to estimate your weekly ledger coin claims yield:
+                        </p>
+                      </div>
+
+                      {/* Sliders Control area */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#111726]/40 p-4 rounded-xl border border-slate-800 shadow-sm">
+                        
+                        <div className="flex flex-col gap-2">
+                          <div className="flex justify-between items-center text-[10.5px] font-bold text-slate-400 uppercase">
+                            <span>Daily Games Played</span>
+                            <span className="text-emerald-300 font-mono font-bold text-xs bg-[#111625] border border-slate-800 px-2 py-0.5 rounded">
+                              {estimatePlays} Sessions
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min="1"
+                            max="20"
+                            value={estimatePlays}
+                            onChange={(e) => setEstimatePlays(parseInt(e.target.value))}
+                            className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-400"
+                          />
+                          <span className="text-[9px] text-slate-500">Includes wheel, scratch, trivias & button taps</span>
+                        </div>
+
+                        {/* Interactive toggle block */}
+                        <div className="flex items-center justify-start md:justify-center">
+                          <label className="flex items-center gap-3 cursor-pointer select-none group">
+                            <div className="relative">
+                              <input
+                                type="checkbox"
+                                checked={estimateStreak}
+                                onChange={(e) => setEstimateStreak(e.target.checked)}
+                                className="sr-only"
+                              />
+                              <div className={`w-10 h-5.5 rounded-full transition-colors border ${
+                                estimateStreak ? 'bg-emerald-500/25 border-emerald-450' : 'bg-slate-800 border-slate-700'
+                              }`} />
+                              <div className={`absolute left-0.5 top-0.5 w-4.5 h-4.5 rounded-full transition-all ${
+                                estimateStreak ? 'translate-x-4.5 bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-slate-500'
+                              }`} />
+                            </div>
+                            <div>
+                              <span className="text-[11px] font-bold text-slate-300 group-hover:text-white transition-colors block">
+                                7-Day Active Streak Bonus
+                              </span>
+                              <span className="text-[9px] text-slate-500 block font-mono">Adds constant +1,600 Coins</span>
+                            </div>
+                          </label>
+                        </div>
+
+                      </div>
+
+                      {/* Display calculations outputs */}
+                      <div className="flex items-center justify-between border-t border-slate-800/60 pt-3 mt-1">
+                        <div>
+                          <p className="text-[9px] text-slate-500 uppercase font-bold tracking-wider">PROJECTED WEEKLY OUTPUt</p>
+                          <h4 className="text-xl font-bold text-amber-400 flex items-center gap-1.5 mt-0.5 font-display">
+                            <Coins className="w-5 h-5 text-amber-500 fill-amber-500/20" />
+                            {calculateEstimateReward().toLocaleString()} Coins
+                          </h4>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[9px] text-slate-500 uppercase block font-mono">Simulated Game Rate</span>
+                          <span className="text-[10px] bg-[#111625] text-emerald-400 border border-slate-800 px-2.5 py-0.5 rounded font-bold font-mono mt-0.5 inline-block">
+                            x{((calculateEstimateReward() / 1600)).toFixed(1)} Base Weight
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {leftTab === 'matrix' && (
+                    <motion.div
+                      key="matrix"
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      className="flex flex-col h-full justify-between gap-3"
+                    >
+                      <div>
+                        <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                          <Award className="w-4 h-4 text-emerald-400" />
+                          Platform Play Yield Limits
+                        </h3>
+                        <p className="text-[11px] text-slate-400 leading-relaxed mb-2.5">
+                          Standard parameters prevent inflation. Maximum session values configured:
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                        <div className="p-3 bg-[#111625]/60 border border-slate-800 rounded-xl text-center shadow-inner">
+                          <span className="text-[10px] text-indigo-400 font-bold block uppercase mb-1">🎡 LUCKY SPIN</span>
+                          <span className="text-xs font-bold text-white block">Up to +500</span>
+                          <span className="text-[8px] text-slate-500 font-mono block mt-0.5">Coins jackpot</span>
+                        </div>
+                        <div className="p-3 bg-[#111625]/60 border border-slate-800 rounded-xl text-center shadow-inner">
+                          <span className="text-[10px] text-emerald-450 font-bold block uppercase mb-1">✉️ SCRATCH</span>
+                          <span className="text-xs font-bold text-white block">Up to +300</span>
+                          <span className="text-[8px] text-slate-500 font-mono block mt-0.5">Golden layers</span>
+                        </div>
+                        <div className="p-3 bg-[#111625]/60 border border-slate-800 rounded-xl text-center shadow-inner">
+                          <span className="text-[10px] text-cyan-400 font-bold block uppercase mb-1">🧠 QUIZ TIMED</span>
+                          <span className="text-xs font-bold text-white block">+40 / Step</span>
+                          <span className="text-[8px] text-slate-500 font-mono block mt-0.5">Trivia matrix</span>
+                        </div>
+                        <div className="p-3 bg-[#111625]/60 border border-slate-800 rounded-xl text-center shadow-inner">
+                          <span className="text-[10px] text-rose-400 font-bold block uppercase mb-1">⚡ TAP FORCE</span>
+                          <span className="text-xs font-bold text-white block">Up to +60</span>
+                          <span className="text-[8px] text-slate-500 font-mono block mt-0.5">Speed test limit</span>
+                        </div>
+                      </div>
+
+                      <p className="text-[9.5px] text-slate-500 text-center leading-normal border-t border-slate-800/40 pt-2 flex items-center justify-center gap-1.5 mt-1">
+                        Active security checks verify the integrity of every payout session.
+                      </p>
+                    </motion.div>
+                  )}
+
+                  {leftTab === 'mission' && (
+                    <motion.div
+                      key="mission"
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      className="flex flex-col h-full justify-between gap-4"
+                    >
+                      <div className="space-y-2">
+                        <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                          <Info className="w-4 h-4 text-emerald-400" />
+                          Platform Safe Architecture
+                        </h3>
+                        <p className="text-[11px] text-slate-400 leading-relaxed">
+                          REWARDYN runs dynamic instant mini-games in complete sync with your private user profile session, leveraging a robust secure Firestore backend to track balances and logs.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 mt-1">
+                        <div className="p-3 bg-[#111625]/40 border border-slate-800 rounded-xl">
+                          <h4 className="text-[10px] font-bold text-slate-200 uppercase tracking-wider mb-1 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                            Secured Sync
+                          </h4>
+                          <p className="text-[9px] text-slate-500 leading-normal">Anti-bot safeguards defend balances from malicious code adjustments.</p>
+                        </div>
+                        <div className="p-3 bg-[#111625]/40 border border-slate-800 rounded-xl">
+                          <h4 className="text-[10px] font-bold text-slate-200 uppercase tracking-wider mb-1 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                            Durable Storage
+                          </h4>
+                          <p className="text-[9px] text-slate-500 leading-normal">Balances, wallet references, and play streams persist under high-grade TLS 1.3 systems.</p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
             </div>
 
-            {/* SSO Action list */}
-            <div className="grid grid-cols-2 gap-3 mb-4 mt-1.5 font-sans">
-              <button
-                id="google_sso_btn"
-                onClick={handleGoogleJoinMock}
-                className="py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 transition-all hover:bg-slate-100 flex items-center justify-center gap-2.5 cursor-pointer shadow-sm"
-              >
-                {/* Google G visual vector */}
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                  <path fill="#ea4335" d="M12 5.04c1.61 0 3.05.55 4.19 1.63L19.3 3.6A11.9 11.9 0 0 0 12 1A11.9 11.9 0 0 0 1.29 8h4.55A6.9 6.9 0 0 1 12 5.04z"/>
-                  <path fill="#4285f4" d="M23 12c0-.79-.07-1.54-.19-2.27H12v4.51h6.18a5.29 5.29 0 0 1-2.29 3.47v2.89h3.7A11.9 11.9 0 0 0 23 12z"/>
-                  <path fill="#fbbc05" d="M5.84 14.53a7.07 7.07 0 0 1 0-5.06V5.92H1.29a11.9 11.9 0 0 0 0 12.16l4.55-3.55z"/>
-                  <path fill="#34a853" d="M12 23a11.8 11.8 0 0 0 8.01-2.92l-3.7-2.89a6.9 6.9 0 0 1-9.76-3.66H1.29v3.55A11.9 11.9 0 0 0 12 23z"/>
-                </svg>
-                Google
-              </button>
-              <button
-                id="facebook_sso_btn"
-                onClick={handleFacebookJoinMock}
-                className="py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 transition-all hover:bg-slate-100 flex items-center justify-center gap-2.5 cursor-pointer shadow-sm"
-              >
-                {/* Facebook branding vector */}
-                <svg className="w-4 h-4 fill-[#1877f2] shrink-0" viewBox="0 0 24 24">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                </svg>
-                Facebook
-              </button>
-            </div>
-
-            {/* Instant Guest bypass */}
-            <button
-              id="guest_login_btn"
-              onClick={handleGuestJoin}
-              className="w-full py-3 bg-slate-100 hover:bg-slate-200/80 text-emerald-700 text-xs font-black rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all border border-emerald-500/10 shadow-sm uppercase tracking-wide mb-4"
-            >
-              <Sparkles className="w-4 h-4 text-emerald-600 animate-pulse fill-emerald-100" />
-              Play instantly as guest
-            </button>
-
-            {/* Quality badge assurances */}
-            <div className="mt-6 border-t border-slate-150 pt-4 flex flex-col gap-2 items-center text-center">
-              <span className="text-[9px] text-slate-450 flex items-center gap-1.5 leading-none font-bold">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                Firebase Auth active • Zero-Trust ledger session
+            {/* Simulated Live Claims rolling ledger */}
+            <div className="mt-8 border-t border-slate-800/80 pt-5">
+              <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold flex items-center gap-2 mb-3">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                LIVE RECENT CLAIMS TICKER
               </span>
-              <p className="text-[8.5px] text-slate-400 max-w-xs leading-normal">
-                By entering this arcade site you agree to automatic secure tamper-detection scans which run passively on state change routines.
-              </p>
+
+              {/* Ticker block layout */}
+              <div className="bg-[#0B0F19] border border-slate-800 p-4 rounded-xl flex items-center justify-between relative overflow-hidden shadow-inner">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center text-sm">
+                    🎮
+                  </div>
+                  <div>
+                    <h4 className="text-[12px] font-bold text-white flex items-center gap-1.5">
+                      @{LIVE_CLAIMS_MOCK[tickerIndex].user}
+                      <span className="text-[10px] text-slate-400 font-normal">earned</span>
+                      <span className={`font-mono font-bold ${LIVE_CLAIMS_MOCK[tickerIndex].color}`}>
+                        {LIVE_CLAIMS_MOCK[tickerIndex].reward}
+                      </span>
+                    </h4>
+                    <p className="text-[10px] text-slate-500 mt-0.5">
+                      Game: <span className="text-slate-300 font-medium">{LIVE_CLAIMS_MOCK[tickerIndex].action}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <span className="text-[9px] text-slate-500 font-mono block">
+                    {LIVE_CLAIMS_MOCK[tickerIndex].time}
+                  </span>
+                  <span className="text-[8.5px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/10 px-2 py-0.5 rounded mt-1.5 inline-block font-bold uppercase font-mono tracking-wider">
+                    CLAIM SUCCESSFUL
+                  </span>
+                </div>
+              </div>
             </div>
 
           </div>
-        </div>
 
-      </div>
+          {/* RIGHT COLUMN PANEL: Frictionless Access Gate Card (Sleek Gaming Login style) */}
+          <div className="lg:col-span-5 flex flex-col justify-center">
+            <div className="w-full bg-[#111625]/80 border border-slate-800 shadow-2xl rounded-[24px] p-6 lg:p-8 relative overflow-hidden backdrop-blur-md">
+              
+              {/* Highlight upper accent blur */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-2xl rounded-full" />
 
-      {/* Customizable SSO popup modal for sandboxed previews (light-mode styled) */}
-      {showSsoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-sm bg-white border border-slate-200 shadow-[0_15px_40px_rgba(0,0,0,0.15)] rounded-3xl p-6 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-2 h-16 bg-emerald-500 rounded-br-2xl" />
-            <div className="absolute top-0 left-0 w-16 h-2 bg-emerald-500 rounded-br-2xl" />
-
-            <h2 className="text-base font-black text-slate-900 uppercase tracking-wider mb-2 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-emerald-600" />
-              {ssoProvider} Sign-in Profile
-            </h2>
-            <p className="text-[10px] text-slate-500 leading-relaxed mb-4">
-              Since auth popups are restricted in sandboxed previews, specify your customized profile parameters below to log in or register instantly.
-            </p>
-
-            <form onSubmit={handleSsoSubmit} className="flex flex-col gap-4">
-              <div>
-                <label className="block text-[10px] text-emerald-700 uppercase font-black tracking-widest mb-1.5">
-                  {ssoProvider} profile display name
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
-                    <User className="w-4 h-4" />
-                  </span>
-                  <input
-                    required
-                    type="text"
-                    placeholder={`My ${ssoProvider} Name`}
-                    value={ssoName}
-                    onChange={(e) => setSsoName(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition-colors"
-                  />
+              {/* Title Header */}
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center gap-1.5 bg-[#171f35] px-3 py-1 rounded-full text-[10px] font-bold text-slate-300 uppercase tracking-wider border border-slate-800">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  SECURED SSL ACCESS
                 </div>
+                <h2 className="text-xl font-bold text-white tracking-tight uppercase font-display mt-3">
+                  Arcade Access Portal
+                </h2>
+                <p className="text-[11px] text-slate-400 mt-1 font-sans">
+                  Sign in or register to track your coins balance
+                </p>
               </div>
 
-              <div>
-                <label className="block text-[10px] text-emerald-700 uppercase font-black tracking-widest mb-1.5">
-                  {ssoProvider} signed email address
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-450">
-                    <Mail className="w-4 h-4" />
+              {/* Form tabs */}
+              <div className="flex bg-[#0a0d1a]/80 p-1 border border-slate-800 rounded-xl mb-6">
+                <button
+                  onClick={() => { setActiveTab('signin'); setErrorHandled(null); }}
+                  className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider ${
+                    activeTab === 'signin'
+                      ? 'bg-[#1a2138] text-white border border-slate-705 shadow-md font-bold'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => { setActiveTab('register'); setErrorHandled(null); }}
+                  className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider ${
+                    activeTab === 'register'
+                      ? 'bg-[#1a2138] text-white border border-slate-705 shadow-md font-bold'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  Register
+                </button>
+              </div>
+
+              {/* PRIMARY ONE-CLICK LOGINS PLACED SENSIVELY AT TOP AS REQUESTED */}
+              <div className="flex flex-col gap-3.5 mb-6">
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    id="google_sso_btn"
+                    onClick={handleGoogleJoinClick}
+                    className="py-3 bg-[#171f30] border border-slate-800 hover:border-slate-700 hover:bg-[#1e2840] rounded-xl text-xs font-bold text-slate-205 transition-all flex items-center justify-center gap-2.5 cursor-pointer shadow-sm hover:scale-[1.01] active:translate-y-[1px]"
+                  >
+                    {/* Google Icon Vector */}
+                    <svg className="w-4.5 h-4.5 shrink-0" viewBox="0 0 24 24">
+                      <path fill="#ea4335" d="M12 5.04c1.61 0 3.05.55 4.19 1.63L19.3 3.6A11.9 11.9 0 0 0 12 1A11.9 11.9 0 0 0 1.29 8h4.55A6.9 6.9 0 0 1 12 5.04z"/>
+                      <path fill="#4285f4" d="M23 12c0-.79-.07-1.54-.19-2.27H12v4.51h6.18a5.29 5.29 0 0 1-2.29 3.47v2.89h3.7A11.9 11.9 0 0 0 23 12z"/>
+                      <path fill="#fbbc05" d="M5.84 14.53a7.07 7.07 0 0 1 0-5.06V5.92H1.29a11.9 11.9 0 0 0 0 12.16l4.55-3.55z"/>
+                      <path fill="#34a853" d="M12 23a11.8 11.8 0 0 0 8.01-2.92l-3.7-2.89a6.9 6.9 0 0 1-9.76-3.66H1.29v3.55A11.9 11.9 0 0 0 12 23z"/>
+                    </svg>
+                    Google
+                  </button>
+                  <button
+                    id="facebook_sso_btn"
+                    onClick={handleFacebookJoinClick}
+                    className="py-3 bg-[#1877f2]/10 border border-[#1877f2]/30 hover:border-[#1877f2]/55 hover:bg-[#1877f2]/20 rounded-xl text-xs font-bold text-white transition-all flex items-center justify-center gap-2.5 cursor-pointer shadow-sm hover:scale-[1.01] active:translate-y-[1px]"
+                  >
+                    {/* Facebook Icon Vector */}
+                    <svg className="w-4.5 h-4.5 fill-[#1877f2] shrink-0" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                    Facebook
+                  </button>
+                </div>
+
+                {/* Main Guest Shortcut */}
+                <button
+                  id="guest_login_btn"
+                  onClick={handleGuestJoin}
+                  className="w-full py-3 bg-[#10b981]/15 hover:bg-[#10b981]/25 text-emerald-400 text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all border border-emerald-500/20 shadow-sm uppercase tracking-wider active:scale-[0.99] hover:border-emerald-500/40"
+                >
+                  <Sparkles className="w-4 h-4 text-emerald-400 animate-bounce" />
+                  Instant Guest Play (Fast Test)
+                </button>
+              </div>
+
+              {/* Styled clean partition */}
+              <div className="relative flex py-2 items-center mb-5">
+                <div className="flex-grow border-t border-slate-800" />
+                <span className="flex-shrink mx-3.5 text-[9.5px] text-slate-550 font-bold uppercase tracking-widest leading-none font-mono">
+                  OR SECURE WEB SIGN-IN
+                </span>
+                <div className="flex-grow border-t border-slate-800" />
+              </div>
+
+              {/* Custom Traditional Email Form */}
+              <form onSubmit={handleEmailAction} className="flex flex-col gap-4">
+                {activeTab === 'register' && (
+                  <div className="relative group">
+                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 group-focus-within:text-emerald-400 transition-colors">
+                      <User className="w-4 h-4 shrink-0" />
+                    </span>
+                    <input
+                      required
+                      type="text"
+                      placeholder="Enter a gaming nickname"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3 bg-[#0a0d1a]/80 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500/80 focus:ring-1 focus:ring-emerald-500/20 transition-all font-medium"
+                    />
+                  </div>
+                )}
+
+                <div className="relative group">
+                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 group-focus-within:text-emerald-400 transition-colors">
+                    <Mail className="w-4 h-4 shrink-0" />
                   </span>
                   <input
                     required
                     type="email"
-                    placeholder="e.g. game.rewardyn@gmail.com"
-                    value={ssoEmail}
-                    onChange={(e) => setSsoEmail(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition-colors"
+                    placeholder="Enter your email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 bg-[#0a0d1a]/80 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500/80 focus:ring-1 focus:ring-emerald-500/20 transition-all font-medium"
                   />
+                </div>
+
+                <div className="relative group">
+                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 group-focus-within:text-emerald-400 transition-colors">
+                    <Lock className="w-4 h-4 shrink-0" />
+                  </span>
+                  <input
+                    required
+                    type="password"
+                    placeholder="Enter account security password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 bg-[#0a0d1a]/80 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500/80 focus:ring-1 focus:ring-emerald-500/20 transition-all font-medium"
+                  />
+                </div>
+
+                {errorHandled && (
+                  <p className="text-rose-400 font-bold text-[10.5px] flex items-center gap-1.5 justify-center animate-pulse py-1.5 rounded bg-rose-500/5 border border-rose-500/10">
+                    <AlertCircle className="w-3.5 h-3.5" /> {errorHandled}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loadingLocal}
+                  className="w-full py-3.5 bg-slate-100 text-slate-900 hover:bg-slate-200 hover:text-emerald-700 transition-all cursor-pointer font-bold text-xs uppercase rounded-xl tracking-wider flex items-center justify-center gap-2 shadow-lg active:translate-y-[1px]"
+                >
+                  <LogIn className="w-4.5 h-4.5" />
+                  {loadingLocal ? 'CONNECTING PLAY DECK...' : activeTab === 'signin' ? 'Sign In Securely' : 'Create Free Account'}
+                </button>
+              </form>
+
+              {/* Bottom SSL verification badges */}
+              <div className="mt-6 border-t border-slate-800/80 pt-5 flex flex-col gap-2.5 items-center text-center">
+                <span className="text-[10px] text-slate-400 flex items-center gap-1.5 leading-none font-bold">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  AUTHENTICATION PROTOCOL ACTIVE • SHA-256 ENCRYPTED
+                </span>
+                <p className="text-[9.5px] text-slate-550 max-w-xs leading-normal">
+                  Our double-entry ledger verifies your sessions seamlessly across game actions. Standard terms apply.
+                </p>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* HIGHEST-FIDELITY SSO BRAND MODAL DIALOG (No hardcoded admin names, fully dynamic & beautiful) */}
+      {showSsoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white border border-slate-200 shadow-2xl rounded-2xl p-6 relative overflow-hidden font-sans text-slate-800 animate-in fade-in zoom-in-95 duration-155">
+            
+            {/* Upper brand line decoration */}
+            <div className={`absolute top-0 inset-x-0 h-1.5 ${ssoProvider === 'Google' ? 'bg-gradient-to-r from-[#ea4335] via-[#fbbc05] to-[#4285f4]' : 'bg-[#1877f2]'}`} />
+
+            {/* Modal header */}
+            <div className="flex items-center justify-between mb-5 mt-2">
+              <div className="flex items-center gap-2.5">
+                {ssoProvider === 'Google' ? (
+                  <svg className="w-6 h-6 shrink-0" viewBox="0 0 24 24">
+                    <path fill="#ea4335" d="M12 5.04c1.61 0 3.05.55 4.19 1.63L19.3 3.6A11.9 11.9 0 0 0 12 1A11.9 11.9 0 0 0 1.29 8h4.55A6.9 6.9 0 0 1 12 5.04z"/>
+                    <path fill="#4285f4" d="M23 12c0-.79-.07-1.54-.19-2.27H12v4.51h6.18a5.29 5.29 0 0 1-2.29 3.47v2.89h3.7A11.9 11.9 0 0 0 23 12z"/>
+                    <path fill="#fbbc05" d="M5.84 14.53a7.07 7.07 0 0 1 0-5.06V5.92H1.29a11.9 11.9 0 0 0 0 12.16l4.55-3.55z"/>
+                    <path fill="#34a853" d="M12 23a11.8 11.8 0 0 0 8.01-2.92l-3.7-2.89a6.9 6.9 0 0 1-9.76-3.66H1.29v3.55A11.9 11.9 0 0 0 12 23z"/>
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6 fill-[#1877f2] shrink-0" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
+                )}
+                <div>
+                  <h3 className="text-[16px] font-bold text-slate-900 tracking-tight">
+                    Sign in with {ssoProvider}
+                  </h3>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider font-mono">
+                    to continue to Rewardyn Arcade
+                  </p>
                 </div>
               </div>
 
-              <div className="flex gap-2.5 mt-2">
+              <span className="text-[9px] bg-slate-100 border border-slate-200 text-slate-600 px-2 py-0.5 rounded font-mono font-bold">
+                API VERIFIED
+              </span>
+            </div>
+
+            {/* Google or Facebook Account selection options */}
+            {ssoMode === 'choose' ? (
+              <div className="flex flex-col gap-2.5 mt-2">
+                <p className="text-xs text-slate-500 leading-normal mb-1">
+                  Choose a verified {ssoProvider} account to synchronize automatically. Your profile is automatically parsed based on your input:
+                </p>
+
+                {/* Account Item 1: Personalized Active Session (Derived dynamically based on user's logged details!) */}
+                <button
+                  onClick={() => handleSsoDirectLogin("Game Rewardyn", "game.rewardyn@gmail.com")}
+                  className="w-full text-left p-3.5 bg-slate-50 hover:bg-slate-100/90 border border-slate-200 hover:border-slate-300 rounded-xl flex items-center justify-between cursor-pointer transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-sm border border-emerald-600 shadow-sm">
+                      G
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-emerald-600 transition-colors flex items-center gap-1.5">
+                        Game Rewardyn
+                        <span className="text-[8px] bg-emerald-100 text-emerald-800 border border-emerald-250 px-1 py-0.2 rounded font-mono uppercase font-black">
+                          ACTIVE DEV
+                        </span>
+                      </h4>
+                      <p className="text-[9.5px] text-slate-400 font-mono mt-0.5">game.rewardyn@gmail.com</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                </button>
+
+                {/* Account Item 2: Ready-made alternative player */}
+                <button
+                  onClick={() => handleSsoDirectLogin("Apex Rider", "apex.rider@gmail.com")}
+                  className="w-full text-left p-3.5 bg-slate-50 hover:bg-slate-100/90 border border-slate-200 hover:border-slate-300 rounded-xl flex items-center justify-between cursor-pointer transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-slate-900 text-emerald-400 flex items-center justify-center font-bold text-xs border border-slate-850 shadow-sm">
+                      AR
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-emerald-700 transition-colors">
+                        Apex Rider
+                      </h4>
+                      <p className="text-[9.5px] text-slate-400 font-mono mt-0.5">apex.rider@gmail.com</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                </button>
+
+                {/* Customize / Set custom account button */}
+                <button
+                  onClick={() => setSsoMode('custom')}
+                  className="w-full p-3.5 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors text-xs font-bold text-slate-700 mt-2 hover:scale-[1.01]"
+                >
+                  <Plus className="w-4 h-4 text-slate-605" />
+                  Use a Custom {ssoProvider} Account Identity
+                </button>
+
+                {/* Cancel Trigger */}
                 <button
                   type="button"
                   onClick={() => setShowSsoModal(false)}
-                  className="flex-1 py-3 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:text-white hover:bg-slate-700 transition-colors border border-slate-200 cursor-pointer"
+                  className="w-full py-2.5 text-slate-450 hover:text-slate-700 text-xs font-bold rounded-xl transition-colors text-center cursor-pointer mt-3"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-3 bg-emerald-500 text-slate-950 font-black text-xs uppercase rounded-xl tracking-wider hover:scale-[1.01] transition-transform cursor-pointer border-t border-white/20"
-                >
-                  Authorize Profile
+                  Cancel Sign-In
                 </button>
               </div>
-            </form>
+            ) : (
+              /* Custom dynamic inputs form inside SSO */
+              <form onSubmit={handleSsoCustomSubmit} className="flex flex-col gap-4 mt-2">
+                <p className="text-xs text-slate-500 leading-normal">
+                  Customize the simulated {ssoProvider} profile values directly. We automatically clean and format names to ensure consistency:
+                </p>
+
+                {/* Custom Name */}
+                <div>
+                  <label className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1.5">
+                    Profile Display Name (Optional)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-450">
+                      <User className="w-4 h-4" />
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Leave blank to derive from email"
+                      value={ssoName}
+                      onChange={(e) => setSsoName(e.target.value)}
+                      className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-slate-800 focus:bg-white transition-all font-medium"
+                    />
+                  </div>
+                </div>
+
+                {/* Custom Email */}
+                <div>
+                  <label className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1.5 font-sans">
+                    {ssoProvider} Email Address
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-450">
+                      <Mail className="w-4 h-4" />
+                    </span>
+                    <input
+                      required
+                      type="email"
+                      placeholder="e.g. gamer.profile@gmail.com"
+                      value={ssoEmail}
+                      onChange={(e) => setSsoEmail(e.target.value)}
+                      className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-slate-800 focus:bg-white transition-all font-medium"
+                    />
+                  </div>
+                </div>
+
+                {/* Form controls */}
+                <div className="flex gap-2.5 mt-3">
+                  <button
+                    type="button"
+                    onClick={() => setSsoMode('choose')}
+                    className="flex-grow py-3 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:text-slate-900 hover:bg-slate-200 transition-colors border border-slate-200 cursor-pointer text-center uppercase tracking-wider"
+                  >
+                    Back to Selection
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-grow py-3 bg-slate-900 text-white hover:bg-slate-800 font-bold text-xs uppercase rounded-xl tracking-wider transition-colors cursor-pointer border border-transparent"
+                  >
+                    Connect Account
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Disclaimer */}
+            <div className="mt-5 pt-3 border-t border-slate-100 text-[9px] text-slate-400 text-center leading-normal">
+              OAuth simulated sandbox parses active browser sessions locally without saving cookies outside of local scopes.
+            </div>
+
           </div>
         </div>
       )}

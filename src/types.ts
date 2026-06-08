@@ -20,7 +20,8 @@ export enum TransactionSource {
   AD = 'ad',
   REFERRAL = 'referral',
   BONUS = 'bonus',
-  ADMIN = 'admin'
+  ADMIN = 'admin',
+  WITHDRAWAL = 'withdrawal'
 }
 
 export enum GameType {
@@ -80,4 +81,24 @@ export interface AdOffer {
   rewardValue: number;
   cooldownSeconds: number;
   type: 'rewarded' | 'interstitial' | 'banner';
+}
+
+export enum WithdrawalStatus {
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REJECTED = 'rejected'
+}
+
+export interface WithdrawalRequest {
+  requestId: string;
+  uid: string;
+  userName: string;
+  userEmail: string;
+  amountCoins: number;
+  paymentMethod: string;
+  paymentDetails: string;
+  status: WithdrawalStatus;
+  createdAt: string;
+  processedAt?: string;
+  adminMessage?: string;
 }

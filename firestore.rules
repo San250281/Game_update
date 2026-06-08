@@ -87,6 +87,20 @@ service cloud.firestore {
         && data.coinsEarned is number && data.coinsEarned >= 0;
     }
 
+    function isValidWithdrawal(data) {
+      return data.keys().hasAll(['requestId', 'uid', 'userName', 'userEmail', 'amountCoins', 'paymentMethod', 'paymentDetails', 'status', 'createdAt'])
+        && data.keys().size() <= 11
+        && data.requestId is string && data.requestId.size() <= 128
+        && data.uid is string && data.uid.size() <= 128
+        && data.userName is string && data.userName.size() <= 256
+        && data.userEmail is string && data.userEmail.size() <= 256
+        && data.amountCoins is number && data.amountCoins > 0
+        && data.paymentMethod is string && data.paymentMethod.size() <= 100
+        && data.paymentDetails is string && data.paymentDetails.size() <= 1000
+        && data.status in ['pending', 'approved', 'rejected']
+        && data.createdAt is string && data.createdAt.size() <= 50;
+    }
+
     // ----------------------------------------------------
     // Collection Match Blocks
     // ----------------------------------------------------
@@ -119,6 +133,13 @@ service cloud.firestore {
       allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
       allow create: if isSignedIn() && (incoming().uid == request.auth.uid || isAdmin()) && isValidGameSession(incoming()) && incoming().createdAt is string && incoming().createdAt.size() <= 50;
       allow update, delete: if false;
+    }
+
+    match /withdrawals/{requestId} {
+      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && (incoming().uid == request.auth.uid || isAdmin()) && isValidWithdrawal(incoming()) && incoming().status == 'pending' && incoming().createdAt is string && incoming().createdAt.size() <= 50;
+      allow update: if isAdmin();
+      allow delete: if false;
     }
   }
 }

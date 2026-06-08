@@ -60,6 +60,25 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["sessionId", "uid", "gameId", "score", "coinsEarned", "createdAt"]
+    },
+    "withdrawal": {
+      "title": "Withdrawal Request",
+      "description": "Pending, approved, or rejected cash-out operations",
+      "type": "object",
+      "properties": {
+        "requestId": { "type": "string" },
+        "uid": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "amountCoins": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "paymentDetails": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "processedAt": { "type": "string", "format": "date-time" },
+        "adminMessage": { "type": "string" }
+      },
+      "required": ["requestId", "uid", "userName", "userEmail", "amountCoins", "paymentMethod", "paymentDetails", "status", "createdAt"]
     }
   },
   "firestore": {
@@ -78,6 +97,10 @@
     "game_sessions/{sessionId}": {
       "schema": { "$ref": "#/entities/game_session" },
       "description": "Player scores and game rewards histories"
+    },
+    "withdrawals/{requestId}": {
+      "schema": { "$ref": "#/entities/withdrawal" },
+      "description": "Withdrawal transactions for admin security reviews"
     }
   }
 }

@@ -6,122 +6,74 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   UserProfile, WalletTransaction, ReferralRecord, GameSession, AdOffer,
-  ProviderType, TransactionType, TransactionSource, GameType
+  ProviderType, TransactionType, TransactionSource, GameType,
+  WithdrawalRequest, WithdrawalStatus
 } from '../types';
-import { isFirebaseLive, db, auth, handleFirestoreError, OperationType } from '../firebase';
-import { signOut, onAuthStateChanged } from 'firebase/auth';
+import { isFirebaseLive, db, auth } from '../firebase';
+import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
+
+// Validate environment
+import '../config/env';
+
+// Mock Data
+import { SEED_COMPETITORS, DEFAULT_ADS, AuditLog } from '../mocks/mockData';
+
+// Services Layer
 import { 
-  collection, doc, getDoc, getDocs, setDoc, updateDoc, 
-  query, where, orderBy, limit, addDoc, serverTimestamp, writeBatch
-} from 'firebase/firestore';
+  getFriendlyNameFromEmail, 
+  generateReferralCode, 
+  getUserProfile, 
+  saveUserProfile, 
+  updateUserLastLogin,
+  loginUserWithEmail,
+  registerUserWithEmail,
+  loginUserAnonymously,
+  loginUserWithGoogle,
+  signOutUser
+} from '../services/authService';
 
-// ----------------------------------------------------
-// System Mock Competitors Seed Data
-// ----------------------------------------------------
-const SEED_COMPETITORS: UserProfile[] = [
-  {
-    uid: 'comp_1',
-    name: 'AlphaGamer ⚡',
-    email: 'alpha.play@gmail.com',
-    photoURL: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=100&auto=format&fit=crop&q=80',
-    provider: ProviderType.GOOGLE,
-    coins: 7420,
-    referralCode: 'ALPHA77',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(),
-    lastLogin: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    isActive: true,
-  },
-  {
-    uid: 'comp_2',
-    name: 'LuckySpinX 🎡',
-    email: 'lucky.spin@yahoo.com',
-    photoURL: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80',
-    provider: ProviderType.GOOGLE,
-    coins: 5200,
-    referralCode: 'GOLDSPIN',
-    referredBy: 'ALPHA77',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
-    lastLogin: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-    isActive: true,
-  },
-  {
-    uid: 'comp_3',
-    name: 'RetroTapQueen 👑',
-    email: 'tapqueen.cyber@outlook.com',
-    photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-    provider: ProviderType.FACEBOOK,
-    coins: 4950,
-    referralCode: 'CYBERTAP',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
-    lastLogin: new Date().toISOString(),
-    isActive: true,
-  },
-  {
-    uid: 'comp_4',
-    name: 'BonusHunter 🎯',
-    email: 'bh.gamers@protonmail.com',
-    photoURL: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
-    provider: ProviderType.EMAIL,
-    coins: 3800,
-    referralCode: 'COINHUNT',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4).toISOString(),
-    lastLogin: new Date(Date.now() - 1000 * 60 * 40).toISOString(),
-    isActive: true,
-  },
-  {
-    uid: 'comp_5',
-    name: 'PixelKnight ⚔️',
-    email: 'knight_pixel@gmail.com',
-    photoURL: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80',
-    provider: ProviderType.GOOGLE,
-    coins: 2150,
-    referralCode: 'PIXEL888',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
-    lastLogin: new Date().toISOString(),
-    isActive: true,
-  },
-];
+import { 
+  listWalletTransactions, 
+  createWalletTransaction, 
+  adminAdjustCoinsInDb 
+} from '../services/walletService';
 
-// Helper to generate a unique 8-character referral code
-function generateReferralCode() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
-  for (let i = 0; i < 8; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
+import { 
+  listGameSessions, 
+  saveGameSession, 
+  validateGameScore 
+} from '../services/gameService';
 
-// ----------------------------------------------------
-// Fraud Audit Log Pattern
-// ----------------------------------------------------
-export interface AuditLog {
-  id: string;
-  uid: string;
-  userName: string;
-  severity: 'low' | 'medium' | 'high';
-  message: string;
-  details: string;
-  createdAt: string;
-}
+import { 
+  listAllUsersFromDb, 
+  filterAndSortLeaderboard 
+} from '../services/leaderboardService';
 
-// ----------------------------------------------------
-// UI Ad Configuration Pattern
-// ----------------------------------------------------
-export const DEFAULT_ADS: AdOffer[] = [
-  { id: 'ad_1', title: 'Spinwheel Sponsor Reward Video', rewardValue: 150, cooldownSeconds: 30, type: 'rewarded' },
-  { id: 'ad_2', title: 'Casual Gaming App Download Pitch', rewardValue: 200, cooldownSeconds: 45, type: 'rewarded' },
-  { id: 'ad_3', title: 'Quick Coin Booster Survey', rewardValue: 250, cooldownSeconds: 60, type: 'rewarded' },
-];
+import { 
+  listReferralsFromDb, 
+  applyReferralInDb 
+} from '../services/referralService';
+
+import { 
+  saveAdWatchInDb, 
+  checkAdWatchEligibility 
+} from '../services/adService';
+
+import {
+  listWithdrawalsFromDb,
+  createWithdrawalInDb,
+  updateWithdrawalInDb
+} from '../services/withdrawalService';
 
 export interface RewardEngineState {
   user: UserProfile | null;
   transactions: WalletTransaction[];
   referrals: ReferralRecord[];
   gameSessions: GameSession[];
+  withdrawalRequests: WithdrawalRequest[];
   leaderboard: UserProfile[];
-  cooldowns: { [key: string]: number }; // timestamp when specific games/ads are available
-  allUsers: UserProfile[]; // populated for sandbox & admin
+  cooldowns: { [key: string]: number };
+  allUsers: UserProfile[];
   auditLogs: AuditLog[];
   ads: AdOffer[];
   isFirebaseMode: boolean;
@@ -138,10 +90,15 @@ export interface RewardEngineState {
   creditCoins: (amount: number, source: TransactionSource, customId?: string) => Promise<void>;
   debitCoins: (amount: number, source: TransactionSource) => Promise<boolean>;
   
+  // Withdrawals Workflow
+  requestWithdrawal: (amountCoins: number, paymentMethod: string, paymentDetails: string) => Promise<{ success: boolean; message: string }>;
+  adminApproveWithdrawal: (requestId: string, adminMessage?: string) => Promise<void>;
+  adminRejectWithdrawal: (requestId: string, adminMessage?: string) => Promise<void>;
+  
   // Games scoring mechanisms
   submitGameScore: (gameId: GameType, score: number, coinsEarned: number) => Promise<{ success: boolean; message: string }>;
   
-  // Referral System code application
+  // Referral System
   applyReferralCode: (code: string) => Promise<{ success: boolean; message: string }>;
   
   // Ad System
@@ -153,6 +110,8 @@ export interface RewardEngineState {
   adminTriggerMockFraud: (targetUid: string, message: string, details: string) => void;
   adminClearAuditLogs: () => void;
 }
+
+export { DEFAULT_ADS };
 
 const RewardEngineContext = createContext<RewardEngineState | undefined>(undefined);
 
@@ -166,6 +125,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [referrals, setReferrals] = useState<ReferralRecord[]>([]);
   const [gameSessions, setGameSessions] = useState<GameSession[]>([]);
+  const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
   const [leaderboard, setLeaderboard] = useState<UserProfile[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [cooldowns, setCooldowns] = useState<{ [key: string]: number }>(() => {
@@ -173,21 +133,19 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     return saved ? JSON.parse(saved) : {};
   });
   
-  const [ads, setAds] = useState<AdOffer[]>(DEFAULT_ADS);
+  const [ads] = useState<AdOffer[]>(DEFAULT_ADS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Synchronize LocalStorage helper for cooldown trackers
+  // Sync stateful cooldowns to disk
   useEffect(() => {
     localStorage.setItem('rg_cooldowns', JSON.stringify(cooldowns));
   }, [cooldowns]);
 
-  // Load and boot Database State (Unified Auth Listener & Fallback Sync)
+  // Load and boot Database State
   useEffect(() => {
     if (!isFirebaseLive) {
-      // ----------------------------------------------------
-      // Local sandbox initialization logic
-      // ----------------------------------------------------
+      // Sandbox Initialization Mode
       setLoading(true);
       try {
         let localUsersStr = localStorage.getItem('rg_users');
@@ -201,7 +159,6 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
         }
         setAllUsers(localUsers);
 
-        // Find current logged user in localStorage list to keep values in sync
         const storedUserStr = localStorage.getItem('rg_user_session');
         const storedUser = storedUserStr ? JSON.parse(storedUserStr) : null;
         if (storedUser) {
@@ -212,25 +169,32 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
             localStorage.setItem('rg_user_session', JSON.stringify(finalProfile));
           });
 
-          // Sync user specific transaction logs
           const localTx = localStorage.getItem(`rg_tx_${storedUser.uid}`);
           setTransactions(localTx ? JSON.parse(localTx) : []);
 
-          // Sync user game sessions
           const localSessions = localStorage.getItem(`rg_sessions_${storedUser.uid}`);
           setGameSessions(localSessions ? JSON.parse(localSessions) : []);
 
-          // Sync user referrals
           const localReferrals = localStorage.getItem(`rg_referrals_${storedUser.uid}`);
           setReferrals(localReferrals ? JSON.parse(localReferrals) : []);
+
+          let localWList: WithdrawalRequest[] = [];
+          if (baseProfile.isAdmin) {
+            const globalW = localStorage.getItem('rg_global_withdrawals');
+            localWList = globalW ? JSON.parse(globalW) : [];
+          } else {
+            const userW = localStorage.getItem(`rg_withdrawals_${storedUser.uid}`);
+            localWList = userW ? JSON.parse(userW) : [];
+          }
+          setWithdrawalRequests(localWList);
         } else {
           setUser(null);
           setTransactions([]);
           setGameSessions([]);
           setReferrals([]);
+          setWithdrawalRequests([]);
         }
 
-        // Sync static security/cheat logs
         const localAudits = localStorage.getItem('rg_fraud_logs');
         setAuditLogs(localAudits ? JSON.parse(localAudits) : []);
       } catch (err) {
@@ -242,40 +206,26 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       return;
     }
 
-    // ----------------------------------------------------
-    // Live Firebase Auth State & Collection Listener
-    // ----------------------------------------------------
+    // Active Firebase mode synchronization
     setLoading(true);
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: any) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
       setError(null);
       try {
         if (firebaseUser) {
-          // User is authenticated in Firebase
-          // 1. Fetch user's profile doc
-          const userDocRef = doc(db, 'users', firebaseUser.uid);
-          let userDocSnap = null;
-          let fetchFailed = false;
-          try {
-            userDocSnap = await getDoc(userDocRef);
-          } catch (err: any) {
-            console.warn("Failed to retrieve user's live document, falling back into sandbox mode:", err);
-            fetchFailed = true;
-          }
+          // Fetch user's profile doc through Service Layer
+          let currentUserProfile = await getUserProfile(firebaseUser.uid);
           
-          let currentUserProfile: UserProfile | null = null;
-          
-          if (!fetchFailed && userDocSnap && userDocSnap.exists()) {
-            currentUserProfile = userDocSnap.data() as UserProfile;
+          if (currentUserProfile) {
             if (!currentUserProfile.isActive) {
-              await signOut(auth);
+              await firebaseSignOut(auth);
               setError('This account has been disabled by security administrators.');
               setUser(null);
               setLoading(false);
               return;
             }
           } else {
-            // New user registration or document missing (or read permission denied because of rules)
+            // Document missing -> Create & Register
             const refCode = generateReferralCode();
             const cleanEmail = firebaseUser.email?.toLowerCase() || `${firebaseUser.uid}@rewardgaming.dev`;
             currentUserProfile = {
@@ -292,36 +242,16 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
               isAdmin: cleanEmail === 'game.rewardyn@gmail.com',
               lastLoginCoinClaimedDate: new Date().toISOString().split('T')[0]
             };
-            try {
-              if (!fetchFailed) {
-                await setDoc(userDocRef, currentUserProfile);
-              }
-            } catch (err: any) {
-              console.warn('Failed to write user profile doc on registration fallback:', err);
-            }
+            await saveUserProfile(firebaseUser.uid, currentUserProfile);
           }
 
-          // 2. Fetch all user records for leaderboards / admin console
-          let usersList: UserProfile[] = [];
-          try {
-            const usersSnap = await getDocs(collection(db, 'users'));
-            if (usersSnap) {
-              usersSnap.forEach((doc) => {
-                usersList.push(doc.data() as UserProfile);
-              });
-            }
-          } catch (err: any) {
-            console.warn('Failed to list user documents, rendering sandbox leaderboards instead:', err);
-          }
+          // Fetch all user records for leaderboards / admin via Service Layer
+          let usersList = await listAllUsersFromDb();
           
+          // Seed fallback data if list is low
           if (usersList.length === 0) {
-            // Merely populate the local state list to seat the leaderboard
-            const batchList = [...SEED_COMPETITORS];
-            for (const competitor of batchList) {
-              usersList.push(competitor);
-            }
+            usersList = [...SEED_COMPETITORS];
           } else {
-            // Pad the leaderboard with competitors if the count of real users is small
             const existingUids = new Set(usersList.map((u) => u.uid));
             for (const competitor of SEED_COMPETITORS) {
               if (!existingUids.has(competitor.uid)) {
@@ -337,81 +267,56 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
             localStorage.setItem('rg_user_session', JSON.stringify(finalProfile));
           }
 
-          // 3. Fetch user specific transactions
-          let txList: WalletTransaction[] = [];
-          try {
-            const txQuery = query(
-              collection(db, 'transactions'), 
-              where('uid', '==', firebaseUser.uid),
-              orderBy('createdAt', 'desc')
-            );
-            const txSnap = await getDocs(txQuery);
-            if (txSnap) {
-              txSnap.forEach((doc) => {
-                txList.push(doc.data() as WalletTransaction);
-              });
-            }
-          } catch (err: any) {
-            console.warn('Failed to list live transactions, showing cached local state:', err);
+          // Fetch user's transactions via Service Layer
+          let txList = await listWalletTransactions(firebaseUser.uid);
+          if (txList.length === 0) {
             const localTx = localStorage.getItem(`rg_tx_${firebaseUser.uid}`);
             txList = localTx ? JSON.parse(localTx) : [];
           }
           setTransactions(txList);
 
-          // 4. Fetch user specific game sessions
-          let sList: GameSession[] = [];
-          try {
-            const sessionsQuery = query(
-              collection(db, 'game_sessions'),
-              where('uid', '==', firebaseUser.uid),
-              orderBy('createdAt', 'desc')
-            );
-            const sessionsSnap = await getDocs(sessionsQuery);
-            if (sessionsSnap) {
-              sessionsSnap.forEach((doc) => {
-                sList.push(doc.data() as GameSession);
-              });
-            }
-          } catch (err: any) {
-            console.warn('Failed to list live game sessions, showing cached local state:', err);
+          // Fetch user's game sessions via Service Layer
+          let sList = await listGameSessions(firebaseUser.uid);
+          if (sList.length === 0) {
             const localSessions = localStorage.getItem(`rg_sessions_${firebaseUser.uid}`);
             sList = localSessions ? JSON.parse(localSessions) : [];
           }
           setGameSessions(sList);
 
-          // 5. Fetch user specific referrals
-          let rList: ReferralRecord[] = [];
-          try {
-            const referralsQuery = query(
-              collection(db, 'referrals'),
-              where('referrerUid', '==', firebaseUser.uid)
-            );
-            const referralsSnap = await getDocs(referralsQuery);
-            if (referralsSnap) {
-              referralsSnap.forEach((doc) => {
-                rList.push(doc.data() as ReferralRecord);
-              });
-            }
-          } catch (err: any) {
-            console.warn('Failed to list live referrals, showing cached local state:', err);
+          // Fetch user's referrals via Service Layer
+          let rList = await listReferralsFromDb(firebaseUser.uid);
+          if (rList.length === 0) {
             const localReferrals = localStorage.getItem(`rg_referrals_${firebaseUser.uid}`);
             rList = localReferrals ? JSON.parse(localReferrals) : [];
           }
           setReferrals(rList);
+
+          // Fetch withdrawal requests via Service Layer
+          let wList = await listWithdrawalsFromDb(currentUserProfile?.isAdmin ? undefined : firebaseUser.uid);
+          if (wList.length === 0) {
+            let localWithdrawalsList: WithdrawalRequest[] = [];
+            if (currentUserProfile?.isAdmin) {
+              const globalW = localStorage.getItem('rg_global_withdrawals');
+              localWithdrawalsList = globalW ? JSON.parse(globalW) : [];
+            } else {
+              const userW = localStorage.getItem(`rg_withdrawals_${firebaseUser.uid}`);
+              localWithdrawalsList = userW ? JSON.parse(userW) : [];
+            }
+            wList = localWithdrawalsList;
+          }
+          setWithdrawalRequests(wList);
         } else {
-          // Logged out
+          // Signout clean state
           setUser(null);
           localStorage.removeItem('rg_user_session');
           setTransactions([]);
           setGameSessions([]);
           setReferrals([]);
-          
-          // Show default leaderboard competitors
+          setWithdrawalRequests([]);
           setAllUsers([...SEED_COMPETITORS]);
         }
-      } catch (err: any) {
-        console.warn('Resilient session auth loader handled error dynamically:', err);
-        // Ensure no terminal lockup
+      } catch (err) {
+        console.warn('Authentication listener error:', err);
         setUser(null);
         setAllUsers([...SEED_COMPETITORS]);
       } finally {
@@ -422,23 +327,14 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     return () => unsubscribe();
   }, [isFirebaseLive]);
 
-  // Compute leaderboards in real time based on active users and competitor data
+  // Standing calculation
   useEffect(() => {
-    // Sort all available database profiles by overall coin standings
-    const sorted = [...allUsers]
-      .filter((u) => u.isActive)
-      .sort((a, b) => b.coins - a.coins);
-    setLeaderboard(sorted);
+    setLeaderboard(filterAndSortLeaderboard(allUsers));
   }, [allUsers]);
 
-  // ----------------------------------------------------
-  // Module: Authentication Handles
-  // ----------------------------------------------------
-
+  // Ensure daily passive login coins are credited
   const ensureLoginCoins = async (profile: UserProfile, currentUsers: UserProfile[]): Promise<UserProfile> => {
     const today = new Date().toISOString().split('T')[0];
-    
-    // Check if user has already received the 20 coins for today
     if (profile.lastLoginCoinClaimedDate === today) {
       return profile;
     }
@@ -464,27 +360,19 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     };
 
     if (isFirebaseLive) {
-      try {
-        const batch = writeBatch(db);
-        batch.set(doc(collection(db, 'transactions'), txId), newTx);
-        batch.update(doc(db, 'users', profile.uid), {
-          coins: updatedCoins,
-          lastLoginCoinClaimedDate: today,
-          lastLogin: updatedProfile.lastLogin
-        });
-        await batch.commit();
-      } catch (error) {
-        console.warn('Failed to commit login coins batch in live mode, utilizing local fallback:', error);
-      }
+      await createWalletTransaction(newTx, updatedCoins);
+      await saveUserProfile(profile.uid, {
+        lastLoginCoinClaimedDate: today,
+        lastLogin: updatedProfile.lastLogin
+      });
     }
 
-    // Save transaction logs locally
+    // Sync state and storage
     const localSpecTxKey = `rg_tx_${profile.uid}`;
     const localTxListStr = localStorage.getItem(localSpecTxKey);
     const localTxList = localTxListStr ? JSON.parse(localTxListStr) : [];
     localStorage.setItem(localSpecTxKey, JSON.stringify([newTx, ...localTxList]));
 
-    // Sync state
     setTransactions(prev => {
       const exists = prev.some(t => t.transactionId === txId);
       return exists ? prev : [newTx, ...prev];
@@ -499,87 +387,50 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
 
   const registerUserRecord = async (profile: UserProfile, listUsers: UserProfile[]) => {
     if (isFirebaseLive) {
-      try {
-        await setDoc(doc(db, 'users', profile.uid), profile);
-      } catch (error) {
-        console.warn('Failed to setDoc on user registration, using local state instead:', error);
-      }
+      await saveUserProfile(profile.uid, profile);
     }
     const updatedUsers = [...listUsers, profile];
     setAllUsers(updatedUsers);
-    
-    // Always persist to local cache as fallback
     localStorage.setItem('rg_users', JSON.stringify(updatedUsers));
     setUser(profile);
     localStorage.setItem('rg_user_session', JSON.stringify(profile));
   };
 
+  // Authentications
   const loginWithEmail = async (email: string, name: string, password?: string) => {
     setLoading(true);
     try {
       const cleanEmail = email.trim().toLowerCase();
       
       if (isFirebaseLive) {
-        // Real or Resilient Firebase Auth
         try {
-          const { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously } = await import('firebase/auth');
-          let firebaseUser: any = null;
-          const cleanPassword = password || 'defaultSecurePasscode123';
-          
+          let firebaseUser;
           try {
-            const res = await signInWithEmailAndPassword(auth, cleanEmail, cleanPassword);
-            firebaseUser = res.user;
+            const signup = await loginUserWithEmail(cleanEmail, password);
+            firebaseUser = signup.user;
           } catch (signInErr: any) {
-            if (signInErr.code === 'auth/operation-not-allowed' || signInErr.code === 'auth/admin-restricted-operation') {
-              // Fallback to anonymous auth if allowed
-              const res = await signInAnonymously(auth);
-              firebaseUser = res.user;
-            } else if (
+            // Attempt Register/Create
+            if (
               signInErr.code === 'auth/user-not-found' || 
               signInErr.code === 'auth/invalid-credential' || 
               signInErr.code === 'auth/missing-password' ||
               signInErr.code === 'auth/invalid-email'
             ) {
-              try {
-                const res = await createUserWithEmailAndPassword(auth, cleanEmail, cleanPassword);
-                firebaseUser = res.user;
-              } catch (signUpErr: any) {
-                if (signUpErr.code === 'auth/operation-not-allowed' || signUpErr.code === 'auth/admin-restricted-operation') {
-                  const res = await signInAnonymously(auth);
-                  firebaseUser = res.user;
-                } else {
-                  throw new Error(signUpErr.message || 'Registration failed.');
-                }
-              }
+              const res = await registerUserWithEmail(cleanEmail, password);
+              firebaseUser = res.user;
             } else {
-              throw new Error(signInErr.message || 'Verification failed.');
+              throw signInErr;
             }
           }
 
-          const userDocRef = doc(db, 'users', firebaseUser.uid);
-          let userDocSnap = null;
-          try {
-            userDocSnap = await getDoc(userDocRef);
-          } catch (err: any) {
-            console.warn('Failed to fetch user doc under live mode:', err);
-          }
-          
-          let profile: UserProfile;
-          if (userDocSnap && userDocSnap.exists()) {
-            profile = userDocSnap.data() as UserProfile;
+          let profile = await getUserProfile(firebaseUser.uid);
+          if (profile) {
             if (!profile.isActive) {
-              await signOut(auth);
+              await signOutUser();
               throw new Error('This user account has been disabled by security administrators.');
             }
-            profile = {
-              ...profile,
-              lastLogin: new Date().toISOString()
-            };
-            try {
-              await updateDoc(userDocRef, { lastLogin: profile.lastLogin });
-            } catch (err: any) {
-              console.warn('Failed to updateDoc lastLogin:', err);
-            }
+            profile = { ...profile, lastLogin: new Date().toISOString() };
+            await updateUserLastLogin(firebaseUser.uid, profile.lastLogin);
           } else {
             const refCode = generateReferralCode();
             profile = {
@@ -595,11 +446,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
               isActive: true,
               isAdmin: cleanEmail === 'game.rewardyn@gmail.com'
             };
-             try {
-              await setDoc(userDocRef, profile);
-            } catch (err: any) {
-              console.warn('Failed to setDoc on creation:', err);
-            }
+            await saveUserProfile(firebaseUser.uid, profile);
           }
           
           const finalProfile = await ensureLoginCoins(profile, allUsers);
@@ -607,87 +454,43 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
           localStorage.setItem('rg_user_session', JSON.stringify(finalProfile));
           return finalProfile;
         } catch (fbErr: any) {
-          console.warn('Live Firebase Email auth has some configuration problems, sliding to local cache sandbox:', fbErr);
-          // Look up if user already exists in sandbox cache
-          const existing = allUsers.find(u => u.email.toLowerCase() === cleanEmail);
-          
-          if (existing) {
-            if (!existing.isActive) {
-              throw new Error('This user account has been disabled by security administrators.');
-            }
-            const updated = {
-              ...existing,
-              lastLogin: new Date().toISOString()
-            };
-            const list = allUsers.map(u => u.uid === existing.uid ? updated : u);
-            setAllUsers(list);
-            localStorage.setItem('rg_users', JSON.stringify(list));
-            const finalProfile = await ensureLoginCoins(updated, list);
-            setUser(finalProfile);
-            localStorage.setItem('rg_user_session', JSON.stringify(finalProfile));
-            return finalProfile;
-          } else {
-            // Create new email user locally
-            const newUid = 'email_' + Math.random().toString(36).substring(2, 11);
-            const refCode = generateReferralCode();
-            const defaultProfile: UserProfile = {
-              uid: newUid,
-              name: name || email.split('@')[0],
-              email: cleanEmail,
-              photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${newUid}`,
-              provider: ProviderType.EMAIL,
-              coins: 20,
-              referralCode: refCode,
-              createdAt: new Date().toISOString(),
-              lastLogin: new Date().toISOString(),
-              isActive: true,
-              isAdmin: cleanEmail === 'game.rewardyn@gmail.com',
-              lastLoginCoinClaimedDate: new Date().toISOString().split('T')[0]
-            };
-            await registerUserRecord(defaultProfile, allUsers);
-            return defaultProfile;
-          }
+          console.warn('Firebase login credentials error, using local fallback:', fbErr);
         }
+      }
+
+      // Local sandbox login credentials logic fallback
+      const existing = allUsers.find(u => u.email.toLowerCase() === cleanEmail);
+      if (existing) {
+        if (!existing.isActive) {
+          throw new Error('This user account has been disabled by security administrators.');
+        }
+        const updated = { ...existing, lastLogin: new Date().toISOString() };
+        const list = allUsers.map(u => u.uid === existing.uid ? updated : u);
+        setAllUsers(list);
+        localStorage.setItem('rg_users', JSON.stringify(list));
+        const finalProfile = await ensureLoginCoins(updated, list);
+        setUser(finalProfile);
+        localStorage.setItem('rg_user_session', JSON.stringify(finalProfile));
+        return finalProfile;
       } else {
-        // Look up if user already exists in sandbox cache
-        const existing = allUsers.find(u => u.email.toLowerCase() === cleanEmail);
-        
-        if (existing) {
-          if (!existing.isActive) {
-            throw new Error('This user account has been disabled by security administrators.');
-          }
-          const updated = {
-            ...existing,
-            lastLogin: new Date().toISOString()
-          };
-          const list = allUsers.map(u => u.uid === existing.uid ? updated : u);
-          setAllUsers(list);
-          localStorage.setItem('rg_users', JSON.stringify(list));
-          const finalProfile = await ensureLoginCoins(updated, list);
-          setUser(finalProfile);
-          localStorage.setItem('rg_user_session', JSON.stringify(finalProfile));
-          return finalProfile;
-        } else {
-          // Create new email user
-          const newUid = 'email_' + Math.random().toString(36).substring(2, 11);
-          const refCode = generateReferralCode();
-          const defaultProfile: UserProfile = {
-            uid: newUid,
-            name: name || email.split('@')[0],
-            email: cleanEmail,
-            photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${newUid}`,
-            provider: ProviderType.EMAIL,
-            coins: 20,
-            referralCode: refCode,
-            createdAt: new Date().toISOString(),
-            lastLogin: new Date().toISOString(),
-            isActive: true,
-            isAdmin: cleanEmail === 'game.rewardyn@gmail.com',
-            lastLoginCoinClaimedDate: new Date().toISOString().split('T')[0]
-          };
-          await registerUserRecord(defaultProfile, allUsers);
-          return defaultProfile;
-        }
+        const newUid = 'email_' + Math.random().toString(36).substring(2, 11);
+        const refCode = generateReferralCode();
+        const defaultProfile: UserProfile = {
+          uid: newUid,
+          name: name || email.split('@')[0],
+          email: cleanEmail,
+          photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${newUid}`,
+          provider: ProviderType.EMAIL,
+          coins: 20,
+          referralCode: refCode,
+          createdAt: new Date().toISOString(),
+          lastLogin: new Date().toISOString(),
+          isActive: true,
+          isAdmin: cleanEmail === 'game.rewardyn@gmail.com',
+          lastLoginCoinClaimedDate: new Date().toISOString().split('T')[0]
+        };
+        await registerUserRecord(defaultProfile, allUsers);
+        return defaultProfile;
       }
     } finally {
       setLoading(false);
@@ -699,42 +502,24 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     try {
       if (isFirebaseLive) {
         try {
-          const { signInAnonymously } = await import('firebase/auth');
-          const res = await signInAnonymously(auth);
+          const res = await loginUserAnonymously();
           const firebaseUser = res.user;
+          let profile = await getUserProfile(firebaseUser.uid);
           
-          const userDocRef = doc(db, 'users', firebaseUser.uid);
-          let userDocSnap = null;
-          try {
-            userDocSnap = await getDoc(userDocRef);
-          } catch (err: any) {
-            console.warn('Failed to retrieve guest doc under live mode:', err);
-          }
-          
-          let profile: UserProfile;
-          if (userDocSnap && userDocSnap.exists()) {
-            profile = userDocSnap.data() as UserProfile;
+          if (profile) {
             if (!profile.isActive) {
-              await signOut(auth);
+              await signOutUser();
               throw new Error('This guest session has been blacklisted.');
             }
-            profile = {
-              ...profile,
-              lastLogin: new Date().toISOString()
-            };
-            try {
-              await updateDoc(userDocRef, { lastLogin: profile.lastLogin });
-            } catch (err: any) {
-              console.warn('Failed to updateDoc guest lastLogin:', err);
-            }
+            profile = { ...profile, lastLogin: new Date().toISOString() };
+            await updateUserLastLogin(firebaseUser.uid, profile.lastLogin);
           } else {
-            const gId = firebaseUser.uid;
             const randName = `Guest #${Math.floor(1000 + Math.random() * 9000)}`;
             profile = {
-              uid: gId,
+              uid: firebaseUser.uid,
               name: randName,
-              email: `${gId.substring(0, 8)}@rewardgaming.dev`,
-              photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${gId}`,
+              email: `${firebaseUser.uid.substring(0, 8)}@rewardgaming.dev`,
+              photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${firebaseUser.uid}`,
               provider: ProviderType.GUEST,
               coins: 0,
               referralCode: generateReferralCode(),
@@ -742,53 +527,33 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
               lastLogin: new Date().toISOString(),
               isActive: true,
             };
-            try {
-              await setDoc(userDocRef, profile);
-            } catch (err: any) {
-              console.warn('Failed to setDoc on guest creation:', err);
-            }
+            await saveUserProfile(firebaseUser.uid, profile);
           }
-          
           setUser(profile);
           localStorage.setItem('rg_user_session', JSON.stringify(profile));
           return profile;
         } catch (fbErr: any) {
-          console.warn('Live Firebase Guest auth has configuration problems, sliding into sandbox simulation:', fbErr);
-          const gId = 'guest_' + Math.random().toString(36).substring(2, 9);
-          const randName = `Guest #${Math.floor(1000 + Math.random() * 9000)}`;
-          const profile: UserProfile = {
-            uid: gId,
-            name: randName,
-            email: `${gId}@rewardgaming.dev`,
-            photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${gId}`,
-            provider: ProviderType.GUEST,
-            coins: 0,
-            referralCode: generateReferralCode(),
-            createdAt: new Date().toISOString(),
-            lastLogin: new Date().toISOString(),
-            isActive: true,
-          };
-          await registerUserRecord(profile, allUsers);
-          return profile;
+          console.warn('Firebase Guest error, using local fallback:', fbErr);
         }
-      } else {
-        const gId = 'guest_' + Math.random().toString(36).substring(2, 9);
-        const randName = `Guest #${Math.floor(1000 + Math.random() * 9000)}`;
-        const profile: UserProfile = {
-          uid: gId,
-          name: randName,
-          email: `${gId}@rewardgaming.dev`,
-          photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${gId}`,
-          provider: ProviderType.GUEST,
-          coins: 0,
-          referralCode: generateReferralCode(),
-          createdAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
-          isActive: true,
-        };
-        await registerUserRecord(profile, allUsers);
-        return profile;
       }
+
+      // Guest sandbox simulation fallback
+      const gId = 'guest_' + Math.random().toString(36).substring(2, 9);
+      const randName = `Guest #${Math.floor(1000 + Math.random() * 9000)}`;
+      const profile: UserProfile = {
+        uid: gId,
+        name: randName,
+        email: `${gId}@rewardgaming.dev`,
+        photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${gId}`,
+        provider: ProviderType.GUEST,
+        coins: 0,
+        referralCode: generateReferralCode(),
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+        isActive: true,
+      };
+      await registerUserRecord(profile, allUsers);
+      return profile;
     } finally {
       setLoading(false);
     }
@@ -801,61 +566,32 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       
       if (isFirebaseLive) {
         try {
-          const { signInWithPopup, GoogleAuthProvider, signInAnonymously } = await import('firebase/auth');
-          let firebaseUser: any = null;
-          let displayName = name;
-          let pURL = photoURL;
+          const result = await loginUserWithGoogle();
+          const firebaseUser = result.user;
+          let profile = await getUserProfile(firebaseUser.uid);
           
-          try {
-            const provider = new GoogleAuthProvider();
-            provider.setCustomParameters({ prompt: 'select_account' });
-            const result = await signInWithPopup(auth, provider);
-            firebaseUser = result.user;
-            displayName = firebaseUser.displayName || displayName;
-            pURL = firebaseUser.photoURL || pURL;
-          } catch (popupErr: any) {
-            console.warn('signInWithPopup failed, falling back to authenticated anonymous user:', popupErr);
-            const result = await signInAnonymously(auth);
-            firebaseUser = result.user;
-          }
-          
-          const userDocRef = doc(db, 'users', firebaseUser.uid);
-          let userDocSnap = null;
-          try {
-            userDocSnap = await getDoc(userDocRef);
-          } catch (err: any) {
-            console.warn('Failed to retrieve Google user doc under live mode:', err);
-          }
-          
-          let profile: UserProfile;
-          if (userDocSnap && userDocSnap.exists()) {
-            profile = userDocSnap.data() as UserProfile;
+          if (profile) {
             if (!profile.isActive) {
-              await signOut(auth);
+              await signOutUser();
               throw new Error('This user account is banned.');
             }
             profile = {
               ...profile,
-              photoURL: pURL || profile.photoURL,
-              name: displayName || profile.name,
+              photoURL: firebaseUser.photoURL || photoURL || profile.photoURL,
+              name: firebaseUser.displayName || name || profile.name,
               lastLogin: new Date().toISOString()
             };
-            try {
-              await updateDoc(userDocRef, { 
-                name: profile.name, 
-                photoURL: profile.photoURL,
-                lastLogin: profile.lastLogin 
-              });
-            } catch (err: any) {
-              console.warn('Failed to updateDoc under Google login:', err);
-            }
+            await saveUserProfile(firebaseUser.uid, {
+              name: profile.name,
+              photoURL: profile.photoURL,
+              lastLogin: profile.lastLogin
+            });
           } else {
-            const newUid = firebaseUser.uid;
             profile = {
-              uid: newUid,
-              name: displayName || 'Google Player',
+              uid: firebaseUser.uid,
+              name: firebaseUser.displayName || name || 'Google Player',
               email: firebaseUser.email?.toLowerCase() || cleanEmail,
-              photoURL: pURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${newUid}`,
+              photoURL: firebaseUser.photoURL || photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${firebaseUser.uid}`,
               provider: ProviderType.GOOGLE,
               coins: 0,
               referralCode: generateReferralCode(),
@@ -864,90 +600,52 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
               isActive: true,
               isAdmin: (firebaseUser.email?.toLowerCase() || cleanEmail) === 'game.rewardyn@gmail.com'
             };
-            try {
-              await setDoc(userDocRef, profile);
-            } catch (err: any) {
-              console.warn('Failed to setDoc on Google user creation:', err);
-            }
+            await saveUserProfile(firebaseUser.uid, profile);
           }
           
           setUser(profile);
           localStorage.setItem('rg_user_session', JSON.stringify(profile));
           return profile;
-        } catch (fbErr: any) {
-          console.warn('Live Google Popup auth had trouble compiling or executing, sliding into local sandbox Google mode:', fbErr);
-          const existing = allUsers.find(u => u.email.toLowerCase() === cleanEmail);
-          if (existing) {
-            if (!existing.isActive) {
-              throw new Error('This user account is banned.');
-            }
-            const updated = {
-              ...existing,
-              photoURL: photoURL || existing.photoURL,
-              name: name || existing.name,
-              lastLogin: new Date().toISOString()
-            };
-            const list = allUsers.map(u => u.uid === existing.uid ? updated : u);
-            setAllUsers(list);
-            localStorage.setItem('rg_users', JSON.stringify(list));
-            setUser(updated);
-            localStorage.setItem('rg_user_session', JSON.stringify(updated));
-            return updated;
-          } else {
-            const newUid = 'google_local_' + Math.random().toString(36).substring(2, 11);
-            const profile: UserProfile = {
-              uid: newUid,
-              name: name || 'Google Player',
-              email: cleanEmail,
-              photoURL: photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${newUid}`,
-              provider: ProviderType.GOOGLE,
-              coins: 0,
-              referralCode: generateReferralCode(),
-              createdAt: new Date().toISOString(),
-              lastLogin: new Date().toISOString(),
-              isActive: true,
-              isAdmin: cleanEmail === 'game.rewardyn@gmail.com'
-            };
-            await registerUserRecord(profile, allUsers);
-            return profile;
-          }
+        } catch (popupErr) {
+          console.warn('Popup login failed, using local Google mock:', popupErr);
         }
+      }
+
+      // Local sandbox google fallback
+      const existing = allUsers.find(u => u.email.toLowerCase() === cleanEmail);
+      if (existing) {
+        if (!existing.isActive) {
+          throw new Error('This user account is banned.');
+        }
+        const updated = {
+          ...existing,
+          photoURL: photoURL || existing.photoURL,
+          name: name || existing.name,
+          lastLogin: new Date().toISOString()
+        };
+        const list = allUsers.map(u => u.uid === existing.uid ? updated : u);
+        setAllUsers(list);
+        localStorage.setItem('rg_users', JSON.stringify(list));
+        setUser(updated);
+        localStorage.setItem('rg_user_session', JSON.stringify(updated));
+        return updated;
       } else {
-        const existing = allUsers.find(u => u.email.toLowerCase() === cleanEmail);
-        if (existing) {
-          if (!existing.isActive) {
-            throw new Error('This user account is banned.');
-          }
-          const updated = {
-            ...existing,
-            photoURL: photoURL || existing.photoURL,
-            name: name || existing.name,
-            lastLogin: new Date().toISOString()
-          };
-          const list = allUsers.map(u => u.uid === existing.uid ? updated : u);
-          setAllUsers(list);
-          localStorage.setItem('rg_users', JSON.stringify(list));
-          setUser(updated);
-          localStorage.setItem('rg_user_session', JSON.stringify(updated));
-          return updated;
-        } else {
-          const newUid = 'google_' + Math.random().toString(36).substring(2, 11);
-          const profile: UserProfile = {
-            uid: newUid,
-            name: name || 'Google Player',
-            email: cleanEmail,
-            photoURL: photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${newUid}`,
-            provider: ProviderType.GOOGLE,
-            coins: 0,
-            referralCode: generateReferralCode(),
-            createdAt: new Date().toISOString(),
-            lastLogin: new Date().toISOString(),
-            isActive: true,
-            isAdmin: cleanEmail === 'game.rewardyn@gmail.com'
-          };
-          await registerUserRecord(profile, allUsers);
-          return profile;
-        }
+        const newUid = 'google_local_' + Math.random().toString(36).substring(2, 11);
+        const profile: UserProfile = {
+          uid: newUid,
+          name: name || 'Google Player',
+          email: cleanEmail,
+          photoURL: photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${newUid}`,
+          provider: ProviderType.GOOGLE,
+          coins: 0,
+          referralCode: generateReferralCode(),
+          createdAt: new Date().toISOString(),
+          lastLogin: new Date().toISOString(),
+          isActive: true,
+          isAdmin: cleanEmail === 'game.rewardyn@gmail.com'
+        };
+        await registerUserRecord(profile, allUsers);
+        return profile;
       }
     } finally {
       setLoading(false);
@@ -958,14 +656,11 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     setUser(null);
     localStorage.removeItem('rg_user_session');
     if (isFirebaseLive) {
-      await signOut(auth);
+      await signOutUser();
     }
   };
 
-  // ----------------------------------------------------
-  // Module: Wallet Operations (Double-entry coin ledger validation)
-  // ----------------------------------------------------
-
+  // Wallet Actions
   const creditCoins = async (amount: number, source: TransactionSource, customId?: string) => {
     if (!user) return;
     
@@ -983,17 +678,9 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     const updatedUser = { ...user, coins: newCoinCount };
 
     if (isFirebaseLive) {
-      try {
-        const batch = writeBatch(db);
-        batch.set(doc(collection(db, 'transactions'), txId), newTx);
-        batch.update(doc(db, 'users', user.uid), { coins: newCoinCount });
-        await batch.commit();
-      } catch (error) {
-        console.warn('Failed to commit transaction batch in live mode, utilizing local sandbox state:', error);
-      }
+      await createWalletTransaction(newTx, newCoinCount);
     }
 
-    // React state update
     setUser(updatedUser);
     localStorage.setItem('rg_user_session', JSON.stringify(updatedUser));
 
@@ -1003,14 +690,12 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     const updatedUsersList = allUsers.map(u => u.uid === user.uid ? updatedUser : u);
     setAllUsers(updatedUsersList);
 
-    // Always keep cache in sync
     localStorage.setItem(`rg_tx_${user.uid}`, JSON.stringify(updatedTxList));
     localStorage.setItem('rg_users', JSON.stringify(updatedUsersList));
   };
 
   const debitCoins = async (amount: number, source: TransactionSource) => {
-    if (!user) return false;
-    if (user.coins < amount) return false;
+    if (!user || user.coins < amount) return false;
 
     const txId = 'tx_' + Math.random().toString(36).substring(2, 15);
     const newTx: WalletTransaction = {
@@ -1026,14 +711,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     const updatedUser = { ...user, coins: newCoinCount };
 
     if (isFirebaseLive) {
-      try {
-        const batch = writeBatch(db);
-        batch.set(doc(collection(db, 'transactions'), txId), newTx);
-        batch.update(doc(db, 'users', user.uid), { coins: newCoinCount });
-        await batch.commit();
-      } catch (error) {
-        console.warn('Failed to commit transaction batch in live mode, utilizing local sandbox state:', error);
-      }
+      await createWalletTransaction(newTx, newCoinCount);
     }
 
     setUser(updatedUser);
@@ -1045,21 +723,198 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     const updatedUsersList = allUsers.map(u => u.uid === user.uid ? updatedUser : u);
     setAllUsers(updatedUsersList);
 
-    // Always keep cache in sync
     localStorage.setItem(`rg_tx_${user.uid}`, JSON.stringify(updatedTxList));
     localStorage.setItem('rg_users', JSON.stringify(updatedUsersList));
 
     return true;
   };
 
-  // ----------------------------------------------------
-  // Module: Games System score & cheat engine validation
-  // ----------------------------------------------------
+  // Withdrawals Workflows
+  const requestWithdrawal = async (amountCoins: number, paymentMethod: string, paymentDetails: string): Promise<{ success: boolean; message: string }> => {
+    if (!user) return { success: false, message: 'You must be logged in.' };
+    
+    if (amountCoins <= 0) {
+      return { success: false, message: 'Withdrawal count must be greater than zero.' };
+    }
+    
+    if (user.coins < amountCoins) {
+      return { success: false, message: 'Insufficient balance to request withdrawal.' };
+    }
 
+    const pendingRequests = withdrawalRequests.filter(r => r.uid === user.uid && r.status === WithdrawalStatus.PENDING);
+    if (pendingRequests.length >= 3) {
+      adminTriggerMockFraud(
+        user.uid,
+        'Withdrawal Request Flooding',
+        `User attempted to submit another withdrawal request while already having ${pendingRequests.length} pending cash-outs.`
+      );
+      return { success: false, message: 'You have exceeded the maximum pending withdrawal limit of 3. Please wait for reviews.' };
+    }
+
+    const requestId = 'withdraw_' + Math.random().toString(36).substring(2, 15);
+    const newRequest: WithdrawalRequest = {
+      requestId,
+      uid: user.uid,
+      userName: user.name,
+      userEmail: user.email,
+      amountCoins,
+      paymentMethod,
+      paymentDetails,
+      status: WithdrawalStatus.PENDING,
+      createdAt: new Date().toISOString()
+    };
+
+    if (isFirebaseLive) {
+      try {
+        await createWithdrawalInDb(newRequest);
+      } catch (err: any) {
+        return { success: false, message: `Could not save withdrawal request in Live database.` };
+      }
+    }
+
+    const updatedRequests = [newRequest, ...withdrawalRequests];
+    setWithdrawalRequests(updatedRequests);
+    
+    localStorage.setItem(`rg_withdrawals_${user.uid}`, JSON.stringify(updatedRequests.filter(r => r.uid === user.uid)));
+    const globalWStr = localStorage.getItem('rg_global_withdrawals');
+    const globalW: WithdrawalRequest[] = globalWStr ? JSON.parse(globalWStr) : [];
+    localStorage.setItem('rg_global_withdrawals', JSON.stringify([newRequest, ...globalW]));
+
+    return { success: true, message: 'Withdrawal request registered! Pending review from administrative hub.' };
+  };
+
+  const adminApproveWithdrawal = async (requestId: string, adminMessage?: string) => {
+    const idx = withdrawalRequests.findIndex(r => r.requestId === requestId);
+    if (idx === -1) return;
+    const request = withdrawalRequests[idx];
+    
+    if (request.status !== WithdrawalStatus.PENDING) return;
+
+    const targetUser = allUsers.find(u => u.uid === request.uid);
+    if (!targetUser) return;
+
+    if (targetUser.coins < request.amountCoins) {
+      adminTriggerMockFraud(
+        request.uid,
+        'Insufficient Balance upon approval',
+        `Admin attempted to approve withdrawal ID: ${requestId} but User has only ${targetUser.coins} coins.`
+      );
+      return;
+    }
+
+    const newCoins = targetUser.coins - request.amountCoins;
+    const finalRequest: WithdrawalRequest = {
+      ...request,
+      status: WithdrawalStatus.APPROVED,
+      processedAt: new Date().toISOString(),
+      adminMessage: adminMessage || 'Processed successfully by Admin.'
+    };
+
+    const debitTx: WalletTransaction = {
+      transactionId: 'tx_withdrawal_approved_' + requestId,
+      uid: request.uid,
+      type: TransactionType.DEBIT,
+      coins: request.amountCoins,
+      source: TransactionSource.WITHDRAWAL,
+      createdAt: new Date().toISOString()
+    };
+
+    if (isFirebaseLive) {
+      await updateWithdrawalInDb(requestId, {
+        status: WithdrawalStatus.APPROVED,
+        processedAt: finalRequest.processedAt,
+        adminMessage: finalRequest.adminMessage
+      }, request.uid, newCoins, debitTx);
+    }
+
+    if (user && user.uid === request.uid) {
+      const updatedLoggedInUser = { ...user, coins: newCoins };
+      setUser(updatedLoggedInUser);
+      localStorage.setItem('rg_user_session', JSON.stringify(updatedLoggedInUser));
+      setTransactions([debitTx, ...transactions]);
+      localStorage.setItem(`rg_tx_${request.uid}`, JSON.stringify([debitTx, ...transactions]));
+    } else {
+      const userTxKey = `rg_tx_${request.uid}`;
+      const savedTxStr = localStorage.getItem(userTxKey);
+      const savedTxList = savedTxStr ? JSON.parse(savedTxStr) : [];
+      localStorage.setItem(userTxKey, JSON.stringify([debitTx, ...savedTxList]));
+    }
+
+    const updatedList = withdrawalRequests.map(r => r.requestId === requestId ? finalRequest : r);
+    setWithdrawalRequests(updatedList);
+
+    const globalWStr = localStorage.getItem('rg_global_withdrawals');
+    if (globalWStr) {
+      const globalWList: WithdrawalRequest[] = JSON.parse(globalWStr);
+      localStorage.setItem('rg_global_withdrawals', JSON.stringify(
+        globalWList.map(r => r.requestId === requestId ? finalRequest : r)
+      ));
+    }
+    const userWKey = `rg_withdrawals_${request.uid}`;
+    const userWStr = localStorage.getItem(userWKey);
+    if (userWStr) {
+      const userWList: WithdrawalRequest[] = JSON.parse(userWStr);
+      localStorage.setItem(userWKey, JSON.stringify(
+        userWList.map(r => r.requestId === requestId ? finalRequest : r)
+      ));
+    }
+
+    const updatedAllUsers = allUsers.map(u => {
+      if (u.uid === request.uid) {
+        return { ...u, coins: newCoins };
+      }
+      return u;
+    });
+    setAllUsers(updatedAllUsers);
+    localStorage.setItem('rg_users', JSON.stringify(updatedAllUsers));
+  };
+
+  const adminRejectWithdrawal = async (requestId: string, adminMessage?: string) => {
+    const idx = withdrawalRequests.findIndex(r => r.requestId === requestId);
+    if (idx === -1) return;
+    const request = withdrawalRequests[idx];
+    
+    if (request.status !== WithdrawalStatus.PENDING) return;
+
+    const finalRequest: WithdrawalRequest = {
+      ...request,
+      status: WithdrawalStatus.REJECTED,
+      processedAt: new Date().toISOString(),
+      adminMessage: adminMessage || 'Rejected by administrator review.'
+    };
+
+    if (isFirebaseLive) {
+      await updateWithdrawalInDb(requestId, {
+        status: WithdrawalStatus.REJECTED,
+        processedAt: finalRequest.processedAt,
+        adminMessage: finalRequest.adminMessage
+      });
+    }
+
+    const updatedList = withdrawalRequests.map(r => r.requestId === requestId ? finalRequest : r);
+    setWithdrawalRequests(updatedList);
+
+    const globalWStr = localStorage.getItem('rg_global_withdrawals');
+    if (globalWStr) {
+      const globalWList: WithdrawalRequest[] = JSON.parse(globalWStr);
+      localStorage.setItem('rg_global_withdrawals', JSON.stringify(
+        globalWList.map(r => r.requestId === requestId ? finalRequest : r)
+      ));
+    }
+    const userWKey = `rg_withdrawals_${request.uid}`;
+    const userWStr = localStorage.getItem(userWKey);
+    if (userWStr) {
+      const userWList: WithdrawalRequest[] = JSON.parse(userWStr);
+      localStorage.setItem(userWKey, JSON.stringify(
+        userWList.map(r => r.requestId === requestId ? finalRequest : r)
+      ));
+    }
+  };
+
+  // Submit score with timing & anti-cheat checks via Service Layer
   const submitGameScore = async (gameId: GameType, score: number, coinsEarned: number) => {
     if (!user) return { success: false, message: 'You must sign in to submit results.' };
 
-    // 1. Anti-Cheat: Timing Validation
     const now = Date.now();
     const gameCooldownKey = `cooldown_${gameId}`;
     const endCooldownTime = cooldowns[gameCooldownKey] || 0;
@@ -1077,28 +932,8 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       };
     }
 
-    // 2. Anti-Cheat: Maximum Reward Boundaries
-    let isCheating = false;
-    let cheatReason = '';
-
-    if (gameId === GameType.TAP_CHALLENGE) {
-      // Tap Challenge Score Check (Max logical score is ~150 taps in 10s)
-      if (score > 150) {
-        isCheating = true;
-        cheatReason = `Anomalous tapping frequency of ${score} taps in 10 seconds. Device autoclicker suspected.`;
-      }
-    } else if (gameId === GameType.QUIZ) {
-      // Quiz limit matches max question scoring 
-      if (coinsEarned > 300) {
-        isCheating = true;
-        cheatReason = `Quiz payout maximum of 300 coins breached. Payout attempted: ${coinsEarned}.`;
-      }
-    } else if (gameId === GameType.SPIN_WHEEL) {
-      if (coinsEarned > 500) {
-        isCheating = true;
-        cheatReason = `Spin Wheel reward ceiling bypassed. Score returned coins: ${coinsEarned}.`;
-      }
-    }
+    // Call service layer score and cheating boundary validator
+    const { isCheating, cheatReason } = validateGameScore(gameId, score, coinsEarned);
 
     if (isCheating) {
       adminTriggerMockFraud(user.uid, 'High Probability Payout Spoof', cheatReason);
@@ -1108,8 +943,6 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       };
     }
 
-    // Cooldown allocation:
-    // Spinwheel/Tap Challenge get quick cooling periods for gameplay (30 and 45s represent high responsive sandbox UI)
     const delay = gameId === GameType.SPIN_WHEEL ? 30 : gameId === GameType.TAP_CHALLENGE ? 45 : 60;
     const futureTime = now + (delay * 1000);
     setCooldowns(prev => ({
@@ -1117,7 +950,6 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       [gameCooldownKey]: futureTime
     }));
 
-    // Record verified game plays
     const sId = 'sess_' + Math.random().toString(36).substring(2, 15);
     const newSession: GameSession = {
       sessionId: sId,
@@ -1129,19 +961,13 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     };
 
     if (isFirebaseLive) {
-      try {
-        await setDoc(doc(collection(db, 'game_sessions'), sId), newSession);
-      } catch (error) {
-        console.warn('Failed to persist live game session, using local cache backup:', error);
-      }
+      await saveGameSession(newSession);
     }
 
     const updatedSessions = [newSession, ...gameSessions];
     setGameSessions(updatedSessions);
-    // Always persist to local cache as fallback
     localStorage.setItem(`rg_sessions_${user.uid}`, JSON.stringify(updatedSessions));
 
-    // Credit coins immediately
     if (coinsEarned > 0) {
       await creditCoins(coinsEarned, TransactionSource.GAME);
     }
@@ -1154,10 +980,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     };
   };
 
-  // ----------------------------------------------------
-  // Module: Referral System Engine logic
-  // ----------------------------------------------------
-
+  // Referrals
   const applyReferralCode = async (code: string) => {
     if (!user) return { success: false, message: 'You must authorize to enter codes.' };
     if (user.referredBy) return { success: false, message: 'This account has already registered references.' };
@@ -1167,13 +990,33 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       return { success: false, message: 'You cannot use your own referral credentials.' };
     }
 
-    // Find custom code owner in database
     const referrer = allUsers.find(u => u.referralCode === targetCode);
     if (!referrer) {
       return { success: false, message: 'Referral code not found in our directory.' };
     }
 
-    // Save logs and transact rewards
+    // 1. Anti-referral abuse: prevent same base emails (prevent email salt/sub-address exploits)
+    const baseEmail = (email: string) => email.split('@')[0].split('+')[0].toLowerCase();
+    if (baseEmail(referrer.email) === baseEmail(user.email)) {
+      adminTriggerMockFraud(
+        user.uid,
+        'Referral Loop Stopped',
+        `User ${user.name} attempted applying referral code of referrer ${referrer.name} with identical email base.`
+      );
+      return { success: false, message: 'Security block: referral address handle collision check failed.' };
+    }
+
+    // 2. Anti-referral abuse: cap refers per referrer (max 10 lifetime invites per account to combat bot farms)
+    const referrerReferralsCount = referrals.filter(r => r.referrerUid === referrer.uid).length;
+    if (referrerReferralsCount >= 10) {
+      adminTriggerMockFraud(
+        referrer.uid,
+        'Referral Threshold Exceeded',
+        `User ${referrer.name} has hit the lifetime referral threshold of 10 users.`
+      );
+      return { success: false, message: 'This invite code is inactive as the owner has completed their max invitation limit of 10.' };
+    }
+
     const refId = 'ref_' + Math.random().toString(36).substring(2, 15);
     const refRecord: ReferralRecord = {
       referralId: refId,
@@ -1183,26 +1026,52 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       createdAt: new Date().toISOString()
     };
 
-    // Referrer gets 500, New User gets 200
     const updatedUser = {
       ...user,
       referredBy: referrer.uid
     };
 
+    const finalReferrerCoins = referrer.coins + 500;
+    const finalReferrer = {
+      ...referrer,
+      coins: finalReferrerCoins
+    };
+
+    const inviteeCoins = user.coins + 200;
+    const inviteeTxId = 'tx_invitee_' + Math.random().toString(36).substring(2, 15);
+    const inviteeTx: WalletTransaction = {
+      transactionId: inviteeTxId,
+      uid: user.uid,
+      type: TransactionType.CREDIT,
+      coins: 200,
+      source: TransactionSource.REFERRAL,
+      createdAt: new Date().toISOString()
+    };
+
+    const inviterTxId = 'tx_inviter_' + Math.random().toString(36).substring(2, 15);
+    const inviterTx: WalletTransaction = {
+      transactionId: inviterTxId,
+      uid: referrer.uid,
+      type: TransactionType.CREDIT,
+      coins: 500,
+      source: TransactionSource.REFERRAL,
+      createdAt: new Date().toISOString()
+    };
+
     if (isFirebaseLive) {
-      try {
-        const batch = writeBatch(db);
-        batch.set(doc(collection(db, 'referrals'), refId), refRecord);
-        batch.update(doc(db, 'users', user.uid), { referredBy: referrer.uid });
-        await batch.commit();
-      } catch (error) {
-        handleFirestoreError(error, OperationType.WRITE, `referrals/${refId}`);
-        return { success: false, message: 'Database query errors occurred posting referral references.' };
-      }
+      await applyReferralInDb(
+        refRecord,
+        user.uid,
+        referrer.uid,
+        inviteeCoins,
+        finalReferrerCoins,
+        inviteeTx,
+        inviterTx
+      );
     }
 
-    setUser(updatedUser);
-    localStorage.setItem('rg_user_session', JSON.stringify(updatedUser));
+    setUser({ ...updatedUser, coins: inviteeCoins });
+    localStorage.setItem('rg_user_session', JSON.stringify({ ...updatedUser, coins: inviteeCoins }));
 
     const updatedRefs = [refRecord, ...referrals];
     setReferrals(updatedRefs);
@@ -1211,57 +1080,21 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       localStorage.setItem(`rg_referrals_${user.uid}`, JSON.stringify(updatedRefs));
     }
 
-    // Appoint coins: credit caller with 200
-    await creditCoins(200, TransactionSource.REFERRAL);
-
-    // Credit referrer with 500
-    const originalReferrerCoins = referrer.coins;
-    const finalReferrerCoins = originalReferrerCoins + 500;
-    const finalReferrer = {
-      ...referrer,
-      coins: finalReferrerCoins
-    };
+    // Update transactions list locally
+    setTransactions(prev => [inviteeTx, ...prev]);
 
     const updatedUsersList = allUsers.map(u => {
-      if (u.uid === user.uid) return updatedUser;
+      if (u.uid === user.uid) return { ...updatedUser, coins: inviteeCoins };
       if (u.uid === referrer.uid) return finalReferrer;
       return u;
     });
     setAllUsers(updatedUsersList);
 
-    if (isFirebaseLive) {
-      try {
-        // Send companion credits to the inviter
-        const inviterTxId = 'tx_inviter_' + Math.random().toString(36).substring(2, 15);
-        const inviterTx: WalletTransaction = {
-          transactionId: inviterTxId,
-          uid: referrer.uid,
-          type: TransactionType.CREDIT,
-          coins: 500,
-          source: TransactionSource.REFERRAL,
-          createdAt: new Date().toISOString()
-        };
-        const batch = writeBatch(db);
-        batch.set(doc(collection(db, 'transactions'), inviterTxId), inviterTx);
-        batch.update(doc(db, 'users', referrer.uid), { coins: finalReferrerCoins });
-        await batch.commit();
-      } catch (err) {
-        console.warn('Silent issue giving coins to inviter:', err);
-      }
-    } else {
+    if (!isFirebaseLive) {
       localStorage.setItem('rg_users', JSON.stringify(updatedUsersList));
-      // Save transaction ledger entries directly in companion's folder
       const compTxListStr = localStorage.getItem(`rg_tx_${referrer.uid}`);
       const compTxList: WalletTransaction[] = compTxListStr ? JSON.parse(compTxListStr) : [];
-      const parentTx: WalletTransaction = {
-        transactionId: 'tx_inviter_' + Math.random().toString(36).substring(2, 15),
-        uid: referrer.uid,
-        type: TransactionType.CREDIT,
-        coins: 500,
-        source: TransactionSource.REFERRAL,
-        createdAt: new Date().toISOString()
-      };
-      localStorage.setItem(`rg_tx_${referrer.uid}`, JSON.stringify([parentTx, ...compTxList]));
+      localStorage.setItem(`rg_tx_${referrer.uid}`, JSON.stringify([inviterTx, ...compTxList]));
     }
 
     return { 
@@ -1270,52 +1103,15 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     };
   };
 
-  // ----------------------------------------------------
-  // Module: Simulated Interactive Ad Monetization
-  // ----------------------------------------------------
-
+  // Watch monetized ad via Service Layer
   const watchAd = async (adId: string) => {
     if (!user) return { success: false, reward: 0, message: 'Sign in to earn ad rewards.' };
 
-    const today = new Date().toISOString().split('T')[0];
+    const todayStr = new Date().toISOString().split('T')[0];
+    const { eligible, message, cleanAdsWatchedToday } = checkAdWatchEligibility(user, todayStr);
 
-    // 1. Mandatory 5-second delay check
-    if (user.lastAdWatchedAt) {
-      const elapsed = Date.now() - new Date(user.lastAdWatchedAt).getTime();
-      if (elapsed < 5000) {
-        const remainingDelay = Math.ceil((5000 - elapsed) / 1000);
-        return {
-          success: false,
-          reward: 0,
-          message: `Please wait ${remainingDelay} second(s) between ads as required by Monetag.`
-        };
-      }
-    }
-
-    // 2. Daily limits check (max 20 ads per day)
-    let adsWatchedToday = user.adsWatchedToday || 0;
-    const lastAdWatchedAt = user.lastAdWatchedAt || '';
-
-    if (lastAdWatchedAt && lastAdWatchedAt.split('T')[0] !== today) {
-      adsWatchedToday = 0;
-    }
-
-    if (adsWatchedToday >= 20) {
-      return {
-        success: false,
-        reward: 0,
-        message: 'Daily Monetag limit reached! You can watch a maximum of 20 ads per day.'
-      };
-    }
-
-    // 3. Cooldown check for specific ad
-    const adKey = `cooldown_${adId}`;
-    const now = Date.now();
-    const endAdTime = cooldowns[adKey] || 0;
-
-    if (now < endAdTime) {
-      const secs = Math.ceil((endAdTime - now) / 1000);
-      return { success: false, reward: 0, message: `Ad network buffering. Refreshing slots in ${secs}s.` };
+    if (!eligible) {
+      return { success: false, reward: 0, message: message || 'Ad play limit in place.' };
     }
 
     const offer = ads.find(a => a.id === adId);
@@ -1323,14 +1119,12 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       return { success: false, reward: 0, message: 'Invalid ad network campaign target.' };
     }
 
-    // Set cooldown period
     const updatedCooldowns = {
       ...cooldowns,
-      [adKey]: now + (offer.cooldownSeconds * 1000)
+      [`cooldown_${adId}`]: Date.now() + (offer.cooldownSeconds * 1000)
     };
     setCooldowns(updatedCooldowns);
 
-    // Credit coins via custom batch/state flow that increments watch count
     const txId = 'tx_ad_' + Math.random().toString(36).substring(2, 15);
     const newTx: WalletTransaction = {
       transactionId: txId,
@@ -1341,29 +1135,20 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       createdAt: new Date().toISOString()
     };
 
-    const nextCoins = (user.coins || 0) + offer.rewardValue;
-    const nextAdsCount = adsWatchedToday + 1;
+    const nextCoins = user.coins + offer.rewardValue;
+    const nextAdsCount = cleanAdsWatchedToday + 1;
+    const lastAdWatchedAt = new Date().toISOString();
+
+    if (isFirebaseLive) {
+      await saveAdWatchInDb(user.uid, txId, newTx, nextCoins, nextAdsCount, lastAdWatchedAt);
+    }
+
     const updatedUser: UserProfile = {
       ...user,
       coins: nextCoins,
       adsWatchedToday: nextAdsCount,
-      lastAdWatchedAt: new Date().toISOString()
+      lastAdWatchedAt
     };
-
-    if (isFirebaseLive) {
-      try {
-        const batch = writeBatch(db);
-        batch.set(doc(collection(db, 'transactions'), txId), newTx);
-        batch.update(doc(db, 'users', user.uid), {
-          coins: nextCoins,
-          adsWatchedToday: nextAdsCount,
-          lastAdWatchedAt: updatedUser.lastAdWatchedAt
-        });
-        await batch.commit();
-      } catch (error) {
-        console.warn('Failed to commit transaction batch in live mode, utilizing local sandbox state:', error);
-      }
-    }
 
     setUser(updatedUser);
     localStorage.setItem('rg_user_session', JSON.stringify(updatedUser));
@@ -1384,10 +1169,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     };
   };
 
-  // ----------------------------------------------------
-  // Module: Secure Admin Actions
-  // ----------------------------------------------------
-
+  // Secure Admin operations
   const adminAdjustCoins = async (targetUid: string, amount: number, type: 'credit' | 'debit') => {
     if (!user || !user.isAdmin) throw new Error('Unassigned security authorization clearance breach attempt.');
 
@@ -1395,25 +1177,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     if (!targetUser) throw new Error('Target user database entity mismatch.');
 
     const cleanCoins = Math.max(0, type === 'credit' ? targetUser.coins + amount : targetUser.coins - amount);
-    const updatedUser = {
-      ...targetUser,
-      coins: cleanCoins
-    };
-
-    if (isFirebaseLive) {
-      try {
-        await updateDoc(doc(db, 'users', targetUid), { coins: cleanCoins });
-      } catch (error) {
-        handleFirestoreError(error, OperationType.UPDATE, `users/${targetUid}`);
-      }
-    }
-
-    const nextUsers = allUsers.map(u => u.uid === targetUid ? updatedUser : u);
-    setAllUsers(nextUsers);
-    if (!isFirebaseLive) {
-      localStorage.setItem('rg_users', JSON.stringify(nextUsers));
-    }
-
+    
     // Create Audit transaction trail log
     const auditTxId = 'admin_tx_' + Math.random().toString(36).substring(2, 11);
     const adminTx: WalletTransaction = {
@@ -1426,19 +1190,21 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     };
 
     if (isFirebaseLive) {
-      try {
-        await setDoc(doc(collection(db, 'transactions'), auditTxId), adminTx);
-      } catch (error) {
-        console.warn('System transaction logs error:', error);
-      }
-    } else {
+      await adminAdjustCoinsInDb(targetUid, cleanCoins, adminTx);
+    }
+
+    const updatedTargetUser = { ...targetUser, coins: cleanCoins };
+    const nextUsers = allUsers.map(u => u.uid === targetUid ? updatedTargetUser : u);
+    setAllUsers(nextUsers);
+    
+    if (!isFirebaseLive) {
+      localStorage.setItem('rg_users', JSON.stringify(nextUsers));
       const specTxKey = `rg_tx_${targetUid}`;
       const savedUserTxStr = localStorage.getItem(specTxKey);
       const savedUserTxList: WalletTransaction[] = savedUserTxStr ? JSON.parse(savedUserTxStr) : [];
       localStorage.setItem(specTxKey, JSON.stringify([adminTx, ...savedUserTxList]));
     }
 
-    // Save system fraud logger event
     adminTriggerMockFraud(
       targetUid,
       `Balance manually adjusted by admin`,
@@ -1453,17 +1219,10 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     if (!targetUser) throw new Error('User not registered in Firestore profiles.');
 
     const toggle = !targetUser.isActive;
-    const updatedUser = {
-      ...targetUser,
-      isActive: toggle
-    };
+    const updatedUser = { ...targetUser, isActive: toggle };
 
     if (isFirebaseLive) {
-      try {
-        await updateDoc(doc(db, 'users', targetUid), { isActive: toggle });
-      } catch (error) {
-        handleFirestoreError(error, OperationType.UPDATE, `users/${targetUid}`);
-      }
+      await saveUserProfile(targetUid, { isActive: toggle });
     }
 
     const nextUsers = allUsers.map(u => u.uid === targetUid ? updatedUser : u);
@@ -1483,7 +1242,6 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     const offender = allUsers.find(u => u.uid === targetUid);
     const targetName = offender ? offender.name : 'Unknown User';
     
-    // Determine severity
     let severity: 'low' | 'medium' | 'high' = 'low';
     if (message.includes('Cooldown') || message.includes('Adjust')) {
       severity = 'medium';
@@ -1517,6 +1275,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       transactions,
       referrals,
       gameSessions,
+      withdrawalRequests,
       leaderboard,
       cooldowns,
       allUsers,
@@ -1533,6 +1292,9 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       
       creditCoins,
       debitCoins,
+      requestWithdrawal,
+      adminApproveWithdrawal,
+      adminRejectWithdrawal,
       submitGameScore,
       applyReferralCode,
       watchAd,
