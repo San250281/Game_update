@@ -5,21 +5,20 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRewardEngine } from '../lib/store';
-import { GameType } from '../types';
+import { GameType, TransactionSource } from '../types';
 import { Play, Sparkles, Clock, AlertTriangle, Coins } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const SECTORS = [
-  { value: 25, label: '+25 Coins', color: '#10b981', probability: 0.3 },   // Emerald
-  { value: 50, label: '+50 Coins', color: '#3b82f6', probability: 0.25 },  // Blue
-  { value: 100, label: '+100 Coins', color: '#d97706', probability: 0.2 }, // Amber
-  { value: 200, label: '+200 Coins', color: '#8b5cf6', probability: 0.15 },// Violet
-  { value: 500, label: 'JACKPOT 🌟', color: '#ec4899', probability: 0.05 },// Pink
-  { value: 0, label: 'Try Again', color: '#4b5563', probability: 0.1 }     // Gray
+  { value: 5, label: '5 Coins', color: '#4b5563', probability: 0.40 },     // Gray
+  { value: 10, label: '10 Coins', color: '#3b82f6', probability: 0.30 },   // Blue
+  { value: 20, label: '20 Coins', color: '#10b981', probability: 0.20 },   // Emerald
+  { value: 50, label: '50 Coins', color: '#8b5cf6', probability: 0.09 },   // Violet
+  { value: 200, label: 'JACKPOT 🌟', color: '#ec4899', probability: 0.01 } // Pink
 ];
 
 export default function SpinWheel() {
-  const { user, cooldowns, submitGameScore } = useRewardEngine();
+  const { user, cooldowns, submitGameScore, debitCoins } = useRewardEngine();
   const [spinning, setSpinning] = useState(false);
   const [prize, setPrize] = useState<typeof SECTORS[0] | null>(null);
   const [cooldownLeft, setCooldownLeft] = useState(0);
@@ -48,8 +47,24 @@ export default function SpinWheel() {
 
   const handleSpin = async () => {
     if (spinning || cooldownLeft > 0) return;
+    
+    const entryFee = 20;
+    if (!user) return;
+    if (user.coins < entryFee) {
+      setToast({ type: 'error', text: `Insufficient balance! Lucky Wheel entry fee is ${entryFee} Coins. Please watch sponsor ads to earn coins.` });
+      return;
+    }
+
     setSpinning(true);
     setPrize(null);
+
+    // Deduct entry fee
+    const debited = await debitCoins(entryFee, TransactionSource.GAME);
+    if (!debited) {
+      setSpinning(false);
+      setToast({ type: 'error', text: 'Error executing transaction. Please refresh and try again.' });
+      return;
+    }
 
     // Roll based on sector probabilities
     const random = Math.random();
@@ -179,7 +194,7 @@ export default function SpinWheel() {
             }`}
           >
             <Play className={`w-5 h-5 fill-current ${spinning ? 'animate-spin' : ''}`} />
-            {spinning ? 'Wheel is spinning...' : 'SPIN FOR REWARDS!'}
+            {spinning ? 'Wheel is spinning...' : 'SPIN FOR REWARDS (20 Coins)'}
           </button>
         )}
       </div>

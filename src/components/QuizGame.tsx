@@ -5,8 +5,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRewardEngine } from '../lib/store';
-import { GameType } from '../types';
-import { Lightbulb, CheckCircle2, XCircle, AlertCircle, Coins, Clock, ArrowRight } from 'lucide-react';
+import { GameType, TransactionSource } from '../types';
+import { Lightbulb, CheckCircle2, XCircle, AlertCircle, Coins, Clock, ArrowRight, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Question {
@@ -46,11 +46,41 @@ const TRIVIA_DATABASE: Question[] = [
     options: ["TCP/IP", "DNS", "Border Gateway Protocol (BGP)", "SSL/TLS"],
     answerIndex: 2,
     funFact: "BGP handles routing decisions between major Autonomous Systems across the global backbone fiber networks."
+  },
+  {
+    question: "In HTML5 Canvas development, which method cleans a specified rectangular area of the canvas?",
+    options: ["clearRect()", "reset()", "eraseRect()", "wipe()"],
+    answerIndex: 0,
+    funFact: "clearRect() sets the pixels in a rectangular area to transparent black, washing any drawn artifacts."
+  },
+  {
+    question: "Which popular web framework uses a compiler to convert code to vanilla JavaScript, completely avoiding a Virtual DOM?",
+    options: ["Svelte", "React", "Vue", "Angular"],
+    answerIndex: 0,
+    funFact: "Svelte compiles your code to tiny, framework-free reactive JS at build time instead of running heavy runtime virtual DOM comparisons."
+  },
+  {
+    question: "What does 'IP' stand for in 'IP Address'?",
+    options: ["Internet Protocol", "Internal Program", "Interconnect Port", "Intellectual Property"],
+    answerIndex: 0,
+    funFact: "IP, or Internet Protocol, is a set of rules governing web packet routing and address assignments globally."
+  },
+  {
+    question: "Who created the original concept and design of Python programming language in 1991?",
+    options: ["Linus Torvalds", "Guido van Rossum", "Dennis Ritchie", "James Gosling"],
+    answerIndex: 1,
+    funFact: "Guido van Rossum developed Python as a hobby script project to succeed ABC language, naming it after Monty Python's Flying Circus."
+  },
+  {
+    question: "In Web3 nomenclature, what does 'Gas Fee' represent?",
+    options: ["The storage capacity limit", "Computational cost for completing ledger transactions", "The token mint speed rate", "Network bandwidth size"],
+    answerIndex: 1,
+    funFact: "Gas Fees act as security fees paid to validators to incentivize processing transactional computations on the ledger."
   }
 ];
 
 export default function QuizGame() {
-  const { cooldowns, submitGameScore } = useRewardEngine();
+  const { user, cooldowns, submitGameScore, debitCoins } = useRewardEngine();
   const [stage, setStage] = useState<'intro' | 'active' | 'complete'>('intro');
   const [qIndex, setQIndex] = useState(0);
   const [selectedOpt, setSelectedOpt] = useState<number | null>(null);
@@ -60,6 +90,7 @@ export default function QuizGame() {
   const [cooldownLeft, setCooldownLeft] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const cooldownKey = `cooldown_${GameType.QUIZ}`;
 
@@ -69,7 +100,7 @@ export default function QuizGame() {
       const now = Date.now();
       const endTime = cooldowns[cooldownKey] || 0;
       if (endTime > now) {
-        setCooldownLeft(Math.ceil((endTime - now) / 1000));
+         setCooldownLeft(Math.ceil((endTime - now) / 1000));
       } else {
         setCooldownLeft(0);
       }
@@ -97,14 +128,30 @@ export default function QuizGame() {
     return () => clearInterval(count);
   }, [qIndex, stage, hasAnswered]);
 
-  const startQuiz = () => {
+  const startQuiz = async () => {
     if (cooldownLeft > 0) return;
+    
+    const entryFee = 30;
+    if (!user) return;
+    if (user.coins < entryFee) {
+      setToast({ type: 'error', text: `Insufficient balance! Quiz entry fee is ${entryFee} Coins. Please watch sponsor ads to earn coins.` });
+      return;
+    }
+
+    // Deduct entry fee
+    const debited = await debitCoins(entryFee, TransactionSource.GAME);
+    if (!debited) {
+      setToast({ type: 'error', text: 'Error executing transaction. Please refresh and try again.' });
+      return;
+    }
+
     setStage('active');
     setQIndex(0);
     setCorrectCount(0);
     setSelectedOpt(null);
     setHasAnswered(false);
     setResultMessage(null);
+    setToast(null);
   };
 
   const handleAnswerSelect = (optIndex: number) => {
@@ -124,12 +171,18 @@ export default function QuizGame() {
       setSelectedOpt(null);
       setHasAnswered(false);
     } else {
-      // Quiz complete! Submit score
-      setStage('complete');
-      setSubmitting(true);
+      // Reward formula: 10/10 correct -> 60 Coins, 8-9 correct -> 30 Coins, 5-7 correct -> 10 Coins, Below 5 -> 0 Coins
+      let potentialCoins = 0;
+      if (correctCount === 10) {
+        potentialCoins = 60;
+      } else if (correctCount >= 8) {
+        potentialCoins = 30;
+      } else if (correctCount >= 5) {
+        potentialCoins = 10;
+      } else {
+        potentialCoins = 0;
+      }
 
-      // Reward formula: 40 coins for every correct answer (Max 200)
-      const potentialCoins = correctCount * 40;
       const res = await submitGameScore(GameType.QUIZ, correctCount, potentialCoins);
       setSubmitting(false);
       setResultMessage(res.message);
@@ -150,8 +203,19 @@ export default function QuizGame() {
           </div>
           <h2 className="text-xl font-bold text-white mb-1">Knowledge Arena Quiz</h2>
           <p className="text-xs text-gray-400 max-w-xs mx-auto mb-6">
-            Test your gaming and blockchain tech lore. Earn <span className="text-yellow-400 font-bold">40 coins</span> per correct answer!
+            Test your gaming and blockchain tech lore.
+            <br />
+            <span className="text-emerald-400 font-semibold">Entry fee: 30 Coins</span>
+            <br />
+            <span className="text-yellow-400 font-medium">10 correct: 60 Coins • 8-9 correct: 30 Coins • 5-7 correct: 10 Coins</span>
           </p>
+
+          {toast && (
+            <div className="mb-4 p-2.5 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-400 flex items-center gap-1.5 justify-center">
+              <AlertTriangle className="w-4 h-4" />
+              <span>{toast.text}</span>
+            </div>
+          )}
 
           {cooldownLeft > 0 ? (
             <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 flex items-center justify-center gap-2 text-amber-400 text-xs font-semibold">
@@ -163,7 +227,7 @@ export default function QuizGame() {
               onClick={startQuiz}
               className="w-full py-3 px-5 bg-gradient-to-r from-blue-500 to-indigo-600 hover:scale-[1.02] shadow-lg transition-all rounded-xl text-white font-extrabold text-sm uppercase tracking-wider"
             >
-              Start Fast Trivia!
+              Start Trivia! (30 Coins)
             </button>
           )}
         </div>

@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useRewardEngine, DEFAULT_ADS } from '../lib/store';
 import { AdOffer } from '../types';
-import { Play, Sparkles, Clock, MonitorPlay, AlertCircle, CheckCircle, ShieldCheck, Video } from 'lucide-react';
+import { Play, Sparkles, Clock, MonitorPlay, AlertCircle, CheckCircle, ShieldCheck, Video, Coins } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import RewardButton from './RewardButton';
 
@@ -18,6 +18,7 @@ export default function AdCenter() {
   const [adStage, setAdStage] = useState<'video' | 'complete'>('video');
   const [cooldownTimers, setCooldownTimers] = useState<{ [key: string]: number }>({});
   const [toast, setToast] = useState<string | null>(null);
+  const [selectedSurveyOption, setSelectedSurveyOption] = useState<string | null>(null);
 
   // Monitor cooldown remaining times in real time
   useEffect(() => {
@@ -67,6 +68,7 @@ export default function AdCenter() {
     setAdStage('video');
     setCountdownActive(true);
     setToast(null);
+    setSelectedSurveyOption(null);
   };
 
   const handleClaimReward = async () => {
@@ -81,6 +83,178 @@ export default function AdCenter() {
 
     setCountdownActive(false);
     setActiveAd(null);
+    setSelectedSurveyOption(null);
+  };
+
+  const renderAdGraphicContent = () => {
+    if (!activeAd) return null;
+
+    switch (activeAd.id) {
+      case 'ad_instant':
+        return (
+          <div className="text-center w-full h-full flex flex-col justify-between p-2">
+            <div>
+              <p className="text-[10px] text-emerald-400 font-extrabold uppercase tracking-widest animate-pulse">
+                Monetag Premium Smartlink Stream
+              </p>
+            </div>
+            <div className="my-auto flex flex-col items-center justify-center">
+              <motion.div
+                animate={{ 
+                  rotateY: 360,
+                  scale: [1, 1.1, 1]
+                }}
+                transition={{ 
+                  duration: 4, 
+                  repeat: Infinity, 
+                  ease: "easeInOut" 
+                }}
+                className="w-16 h-16 rounded-full bg-gradient-to-tr from-yellow-400 via-amber-300 to-yellow-500 flex items-center justify-center shadow-[0_0_25px_rgba(234,179,8,0.5)] border-2 border-yellow-200 mb-3"
+              >
+                <Coins className="w-9 h-9 text-yellow-950 stroke-[2.5]" />
+              </motion.div>
+              <p className="text-[11px] font-black text-white px-2 mt-1 drop-shadow">
+                DIRECT MONETAG CPM BOOST ACTIVE
+              </p>
+              <p className="text-[9px] text-slate-400 mt-1 max-w-xs leading-normal">
+                Redirecting secure smartlink traffic to target campaigns.
+              </p>
+            </div>
+            <div className="text-[8px] text-slate-500 font-mono tracking-wider">
+              CONN: SECURE_MONETAG_STREAM || CPM: +$4.85
+            </div>
+          </div>
+        );
+      case 'ad_1':
+        return (
+          <div className="text-center w-full h-full flex flex-col justify-between p-2">
+            <div>
+              <p className="text-[10px] text-purple-400 font-extrabold uppercase tracking-widest animate-pulse">
+                Arcade Slot Casino Sponsor
+              </p>
+            </div>
+            <div className="my-auto flex flex-col items-center justify-center relative">
+              <div className="relative w-16 h-16 flex items-center justify-center mb-3">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-0 rounded-full border-4 border-dashed border-purple-500 opacity-60"
+                />
+                <motion.div
+                  animate={{ rotate: -360 }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                  className="absolute w-12 h-12 rounded-full border-4 border-dotted border-amber-400 opacity-80"
+                />
+                <span className="text-2xl z-10 filter drop-shadow">🎡</span>
+              </div>
+              <p className="text-[11px] font-black text-white px-2 uppercase">
+                Spin to double your coin payouts
+              </p>
+              <p className="text-[9px] text-slate-400 mt-0.5">
+                Watch spin combinations resolve in background.
+              </p>
+            </div>
+            <div className="text-[8px] text-slate-500 font-mono tracking-wider">
+              JACKPOT_MULTIPLIER: x100 || SYSTEM: SEEDED
+            </div>
+          </div>
+        );
+      case 'ad_2':
+        return (
+          <div className="text-center w-full h-full flex flex-col justify-between p-2">
+            <div>
+              <p className="text-[10px] text-rose-400 font-extrabold uppercase tracking-widest animate-pulse">
+                Casual Gaming Play Store Pitch
+              </p>
+            </div>
+            <div className="my-auto flex flex-col items-center justify-center">
+              <div className="w-24 h-11 bg-slate-900 border border-slate-800 rounded-xl relative overflow-hidden flex items-center justify-center mb-2.5">
+                <div className="absolute bottom-0 inset-x-0 h-1 bg-emerald-500" />
+                <motion.div
+                  animate={{ x: [-80, 100] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  className="absolute bottom-1 w-2.5 h-2.5 bg-rose-500 rounded"
+                />
+                <motion.div
+                  animate={{ y: [0, -18, 0] }}
+                  transition={{ duration: 0.8, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute bottom-1 left-8 w-3 h-3 text-lg"
+                >
+                  ⚔️
+                </motion.div>
+              </div>
+              <p className="text-[11px] font-black text-white px-2">
+                INSTALL PIXELKNIGHT & CLAIM COINS
+              </p>
+              <button className="mt-1 px-3 py-0.5 text-[8px] bg-sky-500 text-slate-950 font-black rounded-full uppercase tracking-wider scale-95 animate-pulse">
+                GET IT ON GOOGLE PLAY
+              </button>
+            </div>
+            <div className="text-[8px] text-slate-500 font-mono tracking-wider">
+              SPONSOR_ID: CELL_PLAY_A1 || STATE: READY
+            </div>
+          </div>
+        );
+      case 'ad_3':
+        return (
+          <div className="w-full h-full flex flex-col justify-between p-2 text-left">
+            <div className="text-center">
+              <p className="text-[10px] text-yellow-500 font-extrabold uppercase tracking-widest animate-pulse">
+                Smart Booster Poll & Survey
+              </p>
+            </div>
+            <div className="my-auto flex flex-col items-center justify-center w-full px-2">
+              <p className="text-[10px] font-black text-slate-200 text-center uppercase mb-1.5 leading-relaxed tracking-wide">
+                How often do you play games on Rewardyn?
+              </p>
+              <div className="grid grid-cols-2 gap-2.5 w-full max-w-[240px]">
+                {['Everyday!', 'Few times/wk'].map((option) => {
+                  const isSelected = selectedSurveyOption === option;
+                  return (
+                    <button
+                      key={option}
+                      onClick={() => setSelectedSurveyOption(option)}
+                      className={`p-1.5 rounded-lg border text-[9px] font-bold text-center transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-yellow-500/20 border-yellow-400 text-yellow-300 font-extrabold'
+                          : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-705'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
+              {selectedSurveyOption && (
+                <motion.p
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-[8px] text-yellow-450 font-bold mt-1.5 uppercase tracking-wider bg-yellow-950/40 px-2 py-0.5 rounded border border-yellow-900/30"
+                >
+                  ✓ Premium Answer Logged
+                </motion.p>
+              )}
+            </div>
+            <div className="text-[8px] text-center text-slate-500 font-mono tracking-wider">
+              SURVEY_POLL_CHANNEL: SECURE_BOOSTER || HASH: SW_3
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <div className="text-center">
+            <p className="text-[11px] text-gray-500 font-bold uppercase animate-pulse">
+              SPONSOR PROMOTIONAL CLIP
+            </p>
+            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-rose-500 via-orange-400 to-yellow-300 mx-auto my-3 flex items-center justify-center shadow-lg">
+              <Sparkles className="w-5 h-5 text-white animate-spin" />
+            </div>
+            <p className="text-xs text-gray-300 font-medium px-4 truncate">
+              {activeAd.title}
+            </p>
+          </div>
+        );
+    }
   };
 
   return (
@@ -197,21 +371,10 @@ export default function AdCenter() {
               </div>
 
               {/* Central Video Graphic Frame Block */}
-              <div className="w-full aspect-video rounded-2xl bg-gradient-to-tr from-slate-950 via-[#181a24] to-slate-900 border-2 border-slate-800 flex flex-col items-center justify-center p-4 relative overflow-hidden shadow-inner my-3">
+              <div className="w-full aspect-video rounded-2xl bg-[#0d1017] border-2 border-slate-800 flex flex-col items-center justify-center p-4 relative overflow-hidden shadow-inner my-3">
                 {/* Simulated game play screen visuals in loops */}
                 {adStage === 'video' ? (
-                  <div className="text-center">
-                    <p className="text-[11px] text-gray-500 font-bold uppercase animate-pulse">
-                      SPONSOR PROMOTIONAL CLIP
-                    </p>
-                    {/* Pulsing gradient orb */}
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-rose-500 via-orange-400 to-yellow-300 mx-auto my-3 animate-ping opacity-60 flex items-center justify-center">
-                      <Sparkles className="w-5 h-5 text-white animate-spin" />
-                    </div>
-                    <p className="text-xs text-gray-300 font-medium px-4 truncate">
-                      {activeAd.title}
-                    </p>
-                  </div>
+                  renderAdGraphicContent()
                 ) : (
                   <div className="text-center animate-bounce">
                     <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500 rounded-full flex items-center justify-center mx-auto mb-2 text-emerald-400">

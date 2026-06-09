@@ -11,6 +11,7 @@ import SpinWheel from './components/SpinWheel';
 import ScratchCard from './components/ScratchCard';
 import QuizGame from './components/QuizGame';
 import TapChallenge from './components/TapChallenge';
+import PuzzleGame from './components/PuzzleGame';
 import Wallet from './components/Wallet';
 import Referrals from './components/Referrals';
 import Leaderboard from './components/Leaderboard';
@@ -18,7 +19,7 @@ import AdCenter from './components/AdCenter';
 import AdminPanel from './components/AdminPanel';
 import { 
   Gamepad2, WalletCards, Trophy, Users, MonitorPlay, Shield, 
-  LogOut, Coins, Sparkles, Clock, Menu, X, ChevronRight, Zap 
+  LogOut, Coins, Sparkles, Clock, Menu, X, ChevronRight, Zap, Puzzle 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -223,10 +224,8 @@ function DashboardLobby() {
                       Arcade Play Arena
                     </h2>
                     <p className="text-xs text-slate-500 mt-1">Select an active HTML5 mini-game to compete and claim instant token rewards</p>
-                  </div>
-
-                  {/* 4 Games Cards grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 select-none">
+                  </div>                  {/* Games Cards grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 select-none">
                     {/* Game 1: Spinwheel */}
                     <div 
                       onClick={() => setActiveGame(GameType.SPIN_WHEEL)}
@@ -239,12 +238,12 @@ function DashboardLobby() {
                         </div>
                         <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Lucky Wheel Spin</h3>
                         <p className="text-[11px] text-slate-600 mt-2.5 leading-relaxed">
-                          Test your physical fortune! Spin the premium segment wheel loaded with diverse tokens and Jackpots up to +500 coins.
+                          Test your physical fortune! Spin the premium segment wheel. Max jackpot is +200 coins. Profit probability is mathematically optimized!
                         </p>
                       </div>
                       <div className="mt-8 flex justify-between items-center text-[10px] font-bold">
                         <span className="text-purple-605 uppercase font-black tracking-wider flex items-center gap-1">
-                          <Coins className="w-3.5 h-3.5 text-amber-500" /> Max: 500 Coins Base
+                          <Coins className="w-3.5 h-3.5 text-amber-500" /> Cost: 20 • Jackpot: 200
                         </span>
                         <span className="text-slate-500 flex items-center gap-1 group-hover:text-emerald-600 transition-colors">
                           Play Game <ChevronRight className="w-4 h-4" />
@@ -264,12 +263,12 @@ function DashboardLobby() {
                         </div>
                         <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Golden Scratch Card</h3>
                         <p className="text-[11px] text-slate-600 mt-2.5 leading-relaxed">
-                          Rub off metallic coatings interactively on standard mouse/touch paths to claim coin allocations up to +300 units instantly.
+                          Rub off metallic coatings interactively on touch paths to claim random coin packages. Gain up to +40 coins instantly!
                         </p>
                       </div>
                       <div className="mt-8 flex justify-between items-center text-[10px] font-bold">
                         <span className="text-blue-605 uppercase font-black tracking-wider flex items-center gap-1">
-                          <Coins className="w-3.5 h-3.5 text-amber-500" /> Max: 300 Coins Claim
+                          <Coins className="w-3.5 h-3.5 text-amber-500" /> Cost: 15 • Max: 40 Coins
                         </span>
                         <span className="text-slate-500 flex items-center gap-1 group-hover:text-emerald-600 transition-colors">
                           Play Game <ChevronRight className="w-4 h-4" />
@@ -289,12 +288,12 @@ function DashboardLobby() {
                         </div>
                         <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Knowledge Arena Quiz</h3>
                         <p className="text-[11px] text-slate-600 mt-2.5 leading-relaxed">
-                          Sharpen your computing and Web3 knowledge trivia. Correct answers grant +40 coins instantly, with 5 multi-choice steps.
+                          Sharpen your computing and Web3 knowledge. Answer up to 10 multi-choice question rounds to earn tiered rewards up to +60 coins!
                         </p>
                       </div>
                       <div className="mt-8 flex justify-between items-center text-[10px] font-bold">
                         <span className="text-emerald-650 uppercase font-black tracking-wider flex items-center gap-1">
-                          <Coins className="w-3.5 h-3.5 text-amber-500" /> Day limit: 200 Coins
+                          <Coins className="w-3.5 h-3.5 text-amber-500" /> Cost: 30 • Max: 60 Coins
                         </span>
                         <span className="text-slate-500 flex items-center gap-1 group-hover:text-emerald-600 transition-colors">
                           Play Game <ChevronRight className="w-4 h-4" />
@@ -314,12 +313,37 @@ function DashboardLobby() {
                         </div>
                         <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Hyper Tap Velocity</h3>
                         <p className="text-[11px] text-slate-600 mt-2.5 leading-relaxed">
-                          Test your finger click dexterity. Tap the neon orb as many times as possible within a strict 10 second countdown.
+                          Test your click speed. Tap the button as fast as you can. Get over 100 taps in 10s to win our highest speed tier reward!
                         </p>
                       </div>
                       <div className="mt-8 flex justify-between items-center text-[10px] font-bold">
-                        <span className="text-rose-605 uppercase font-black tracking-wider flex items-center gap-1">
-                          <Coins className="w-3.5 h-3.5 text-amber-500" /> Max: 60 Coins Payout
+                        <span className="text-rose-650 uppercase font-black tracking-wider flex items-center gap-1">
+                          <Coins className="w-3.5 h-3.5 text-amber-500" /> Cost: 25 • Max: 80 Coins
+                        </span>
+                        <span className="text-slate-500 flex items-center gap-1 group-hover:text-emerald-600 transition-colors">
+                          Play Game <ChevronRight className="w-4 h-4" />
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Game 5: 8-Piece Slide Puzzle */}
+                    <div 
+                      onClick={() => setActiveGame(GameType.PUZZLE)}
+                      className="group bg-white border border-violet-100 hover:border-violet-300 rounded-3xl p-6 relative overflow-hidden shadow-sm hover:shadow-md transition-all transform hover:scale-[1.01] cursor-pointer flex flex-col justify-between"
+                    >
+                      <div className="absolute top-0 right-0 w-28 h-28 bg-violet-500/5 rounded-full blur-2xl group-hover:scale-125 transition-transform" />
+                      <div>
+                        <div className="w-11 h-11 bg-violet-50 border border-violet-200 rounded-xl flex items-center justify-center font-bold text-violet-605 mb-4 shadow-sm">
+                          🧩
+                        </div>
+                        <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">8-Piece Slide Puzzle</h3>
+                        <p className="text-[11px] text-slate-600 mt-2.5 leading-relaxed">
+                          Sliding block intelligence challenge! Arrange numbered squares sequentially. Complete under 1 minute for a whopping +200 coin win!
+                        </p>
+                      </div>
+                      <div className="mt-8 flex justify-between items-center text-[10px] font-bold">
+                        <span className="text-violet-605 uppercase font-black tracking-wider flex items-center gap-1">
+                          <Coins className="w-3.5 h-3.5 text-amber-500" /> Cost: 50 • Max: 200 Gems
                         </span>
                         <span className="text-slate-500 flex items-center gap-1 group-hover:text-emerald-600 transition-colors">
                           Play Game <ChevronRight className="w-4 h-4" />
@@ -353,6 +377,7 @@ function DashboardLobby() {
                     {activeGame === GameType.SCRATCH_CARD && <ScratchCard />}
                     {activeGame === GameType.QUIZ && <QuizGame />}
                     {activeGame === GameType.TAP_CHALLENGE && <TapChallenge />}
+                    {activeGame === GameType.PUZZLE && <PuzzleGame />}
                   </motion.div>
                 </div>
               )}

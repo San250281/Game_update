@@ -28,7 +28,8 @@ export enum GameType {
   SPIN_WHEEL = 'spin_wheel',
   SCRATCH_CARD = 'scratch_card',
   QUIZ = 'quiz',
-  TAP_CHALLENGE = 'tap_challenge'
+  TAP_CHALLENGE = 'tap_challenge',
+  PUZZLE = 'puzzle'
 }
 
 export interface UserProfile {

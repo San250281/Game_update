@@ -5,8 +5,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRewardEngine } from '../lib/store';
-import { GameType } from '../types';
-import { MousePointerClick, Hourglass, Zap, Sparkles, RefreshCw, AlertCircle } from 'lucide-react';
+import { GameType, TransactionSource } from '../types';
+import { MousePointerClick, Hourglass, Zap, Sparkles, RefreshCw, AlertCircle, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface ClickParticle {
@@ -16,7 +16,7 @@ interface ClickParticle {
 }
 
 export default function TapChallenge() {
-  const { cooldowns, submitGameScore } = useRewardEngine();
+  const { user, cooldowns, submitGameScore, debitCoins } = useRewardEngine();
   const [gameState, setGameState] = useState<'idle' | 'running' | 'finished'>('idle');
   const [taps, setTaps] = useState(0);
   const [timeLeft, setTimeLeft] = useState(10);
@@ -25,6 +25,7 @@ export default function TapChallenge() {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const cooldownKey = `cooldown_${GameType.TAP_CHALLENGE}`;
 
@@ -60,12 +61,29 @@ export default function TapChallenge() {
     return () => clearInterval(interval);
   }, [gameState]);
 
-  const startGame = () => {
+  const startGame = async () => {
     if (cooldownLeft > 0) return;
+    const entryFee = 25;
+    if (!user) return;
+
+    if (user.coins < entryFee) {
+      setErrorMsg(`Insufficient coins! Entry fee is ${entryFee} Coins. Please watch sponsor ads to earn coins.`);
+      return;
+    }
+
+    setErrorMsg(null);
+    setToastMsg(null);
+
+    // Deduct entry fee
+    const debited = await debitCoins(entryFee, TransactionSource.GAME);
+    if (!debited) {
+      setErrorMsg('Transaction failed. Please try again.');
+      return;
+    }
+
     setTaps(0);
     setTimeLeft(10);
     setGameState('running');
-    setToastMsg(null);
     setParticles([]);
   };
 
@@ -115,8 +133,17 @@ export default function TapChallenge() {
     setGameState('finished');
     setSubmitting(true);
 
-    // Reward payout: 1 coin per 2 taps (Max score allowed without cheat-ban is 150 taps)
-    const earned = Math.min(60, Math.floor(taps / 2.2)); // capped logically at 60 coins to align with strict limits
+    // Reward payout: Score 100+ -> 80 Coins, Score 70–99 -> 50 Coins, Score 50–69 -> 30 Coins, Below 50 -> 0 Coins.
+    let earned = 0;
+    if (taps >= 100) {
+      earned = 80;
+    } else if (taps >= 70) {
+      earned = 50;
+    } else if (taps >= 50) {
+      earned = 30;
+    } else {
+      earned = 0;
+    }
 
     const result = await submitGameScore(GameType.TAP_CHALLENGE, taps, earned);
     setSubmitting(false);
@@ -126,10 +153,10 @@ export default function TapChallenge() {
   // Get dynamic speed comment / multiplier based on performance
   const getTapMilestone = () => {
     if (taps < 20) return { label: 'Warm up...', color: 'text-slate-400' };
-    if (taps < 45) return { label: 'Steady Tempo! ⚡', color: 'text-blue-400' };
-    if (taps < 70) return { label: 'Turbo Clicker! 🔥', color: 'text-purple-400' };
-    if (taps < 110) return { label: 'GOD SPEED FINGERS! 🚨', color: 'text-amber-400 font-bold' };
-    return { label: 'SUSPICIOUSLY QUICK 😱', color: 'text-rose-400 font-black animate-bounce' };
+    if (taps < 50) return { label: 'Steady Tempo! ⚡', color: 'text-blue-400' };
+    if (taps < 70) return { label: 'Speed Clicker! 🔥', color: 'text-purple-400' };
+    if (taps < 100) return { label: 'GOD SPEED FINGERS! 🚨', color: 'text-amber-400 font-bold' };
+    return { label: 'TAP KING 👑', color: 'text-emerald-400 font-black animate-pulse' };
   };
 
   const currentCps = (taps / (10 - timeLeft || 1)).toFixed(1);
@@ -153,8 +180,17 @@ export default function TapChallenge() {
           </div>
           <h3 className="text-sm font-bold text-white mb-1.5">Are your fingers ready?</h3>
           <p className="text-[11px] text-gray-400 max-w-xs mx-auto mb-6 px-3">
-            Earn coins based on tapping intervals! Be mindful: speed-clicker apps or bots will be caught.
+            <span className="text-emerald-400 font-semibold">Entry fee: 25 Coins</span>
+            <br />
+            <span className="text-rose-450 font-medium">100+ Taps: 80 Coins • 70-99: 50 Coins • 50-69: 30 Coins • &lt;50: 0 Coins</span>
           </p>
+
+          {errorMsg && (
+            <div className="mx-4 mb-4 p-2.5 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-400 flex items-center gap-1.5 justify-center">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
 
           {cooldownLeft > 0 ? (
             <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2.5 mx-4 flex items-center justify-center gap-2 text-amber-400 text-xs font-semibold">
@@ -164,9 +200,9 @@ export default function TapChallenge() {
           ) : (
             <button
               onClick={startGame}
-              className="w-11/12 py-3 bg-gradient-to-r from-rose-500 to-orange-500 hover:scale-[1.02] shadow-[0_4px_15px_rgba(239,68,68,0.25)] hover:shadow-[0_4px_20px_rgba(239,68,68,0.4)] transition-all rounded-xl text-white font-extrabold text-xs uppercase tracking-widest"
+              className="w-11/12 py-3 bg-gradient-to-r from-rose-500 to-orange-500 hover:scale-[1.02] shadow-[0_4px_15px_rgba(239,68,68,0.25)] hover:shadow-[0_4px_20px_rgba(239,68,68,0.4)] transition-all rounded-xl text-white font-extrabold text-xs uppercase tracking-widest cursor-pointer"
             >
-              Start Challenges!
+              Start Challenge! (25 Coins)
             </button>
           )}
         </div>

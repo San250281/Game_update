@@ -42,69 +42,59 @@ service cloud.firestore {
     // Entites Schema Validations
     // ----------------------------------------------------
     function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'name', 'email', 'photoURL', 'provider', 'coins', 'createdAt'])
-        && data.keys().size() <= 17
-        && data.uid is string && data.uid.size() <= 128
-        && data.name is string && data.name.size() <= 256
-        && data.email is string && data.email.size() <= 256
-        && data.photoURL is string && data.photoURL.size() <= 2000
-        && data.provider is string && data.provider.size() <= 100
-        && data.coins is number && data.coins >= 0
-        && data.createdAt is string && data.createdAt.size() <= 50
-        && (!('referralCode' in data) || (data.referralCode is string && data.referralCode.size() <= 100))
-        && (!('isActive' in data) || data.isActive is bool)
-        && (!('lastLogin' in data) || (data.lastLogin is string && data.lastLogin.size() <= 100))
-        && (!('lastLoginCoinClaimedDate' in data) || (data.lastLoginCoinClaimedDate is string && data.lastLoginCoinClaimedDate.size() <= 100))
-        && (!('adsWatchedToday' in data) || (data.adsWatchedToday is number && data.adsWatchedToday >= 0))
-        && (!('lastAdWatchedAt' in data) || (data.lastAdWatchedAt is string && data.lastAdWatchedAt.size() <= 100))
-        && (!('referredBy' in data) || (data.referredBy is string && data.referredBy.size() <= 128))
-        && (!('isAdmin' in data) || data.isAdmin is bool);
+      return (!('uid' in data) || data.uid == null || (data.uid is string && data.uid.size() <= 128))
+        && (!('name' in data) || data.name == null || (data.name is string && data.name.size() <= 256))
+        && (!('coins' in data) || data.coins == null || (data.coins >= 0))
+        && (!('email' in data) || data.email == null || (data.email is string && data.email.size() <= 256))
+        && (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 5000))
+        && (!('provider' in data) || data.provider == null || (data.provider is string && data.provider.size() <= 100))
+        && (!('createdAt' in data) || data.createdAt == null || (data.createdAt is string && data.createdAt.size() <= 50))
+        && (!('referralCode' in data) || data.referralCode == null || (data.referralCode is string && data.referralCode.size() <= 100))
+        && (!('isActive' in data) || data.isActive == null || data.isActive is bool)
+        && (!('lastLogin' in data) || data.lastLogin == null || (data.lastLogin is string && data.lastLogin.size() <= 100))
+        && (!('lastLoginCoinClaimedDate' in data) || data.lastLoginCoinClaimedDate == null || (data.lastLoginCoinClaimedDate is string && data.lastLoginCoinClaimedDate.size() <= 100))
+        && (!('adsWatchedToday' in data) || data.adsWatchedToday == null || (data.adsWatchedToday >= 0))
+        && (!('lastAdWatchedAt' in data) || data.lastAdWatchedAt == null || (data.lastAdWatchedAt is string && data.lastAdWatchedAt.size() <= 100))
+        && (!('referredBy' in data) || data.referredBy == null || (data.referredBy is string && data.referredBy.size() <= 128))
+        && (!('isAdmin' in data) || data.isAdmin == null || data.isAdmin is bool);
     }
 
     function isValidTransaction(data) {
-      return data.keys().hasAll(['transactionId', 'uid', 'type', 'coins', 'source', 'createdAt'])
-        && data.keys().size() == 6
-        && data.transactionId is string && data.transactionId.size() <= 128
-        && data.uid is string && data.uid.size() <= 128
-        && data.type in ['credit', 'debit']
-        && data.coins is number && data.coins >= 0
-        && data.createdAt is string && data.createdAt.size() <= 50
-        && data.source in ['game', 'ad', 'referral', 'bonus', 'admin', 'withdrawal'];
+      return (!('transactionId' in data) || data.transactionId == null || (data.transactionId is string && data.transactionId.size() <= 128))
+        && (!('uid' in data) || data.uid == null || (data.uid is string && data.uid.size() <= 128))
+        && (!('type' in data) || data.type == null || (data.type == 'credit' || data.type == 'debit'))
+        && (!('coins' in data) || data.coins == null || (data.coins >= 0))
+        && (!('createdAt' in data) || data.createdAt == null || (data.createdAt is string && data.createdAt.size() <= 50))
+        && (!('source' in data) || data.source == null || (data.source == 'game' || data.source == 'ad' || data.source == 'referral' || data.source == 'bonus' || data.source == 'admin' || data.source == 'withdrawal'));
     }
 
     function isValidReferral(data) {
-      return data.keys().hasAll(['referralId', 'referrerUid', 'newUserUid', 'rewardGranted', 'createdAt'])
-        && data.keys().size() == 5
-        && data.referralId is string && data.referralId.size() <= 128
-        && data.referrerUid is string && data.referrerUid.size() <= 128
-        && data.newUserUid is string && data.newUserUid.size() <= 128
-        && data.createdAt is string && data.createdAt.size() <= 50
-        && data.rewardGranted is bool;
+      return (!('referralId' in data) || data.referralId == null || (data.referralId is string && data.referralId.size() <= 128))
+        && (!('referrerUid' in data) || data.referrerUid == null || (data.referrerUid is string && data.referrerUid.size() <= 128))
+        && (!('newUserUid' in data) || data.newUserUid == null || (data.newUserUid is string && data.newUserUid.size() <= 128))
+        && (!('createdAt' in data) || data.createdAt == null || (data.createdAt is string && data.createdAt.size() <= 50))
+        && (!('rewardGranted' in data) || data.rewardGranted == null || data.rewardGranted is bool);
     }
 
     function isValidGameSession(data) {
-      return data.keys().hasAll(['sessionId', 'uid', 'gameId', 'score', 'coinsEarned', 'createdAt'])
-        && data.keys().size() == 6
-        && data.sessionId is string && data.sessionId.size() <= 128
-        && data.uid is string && data.uid.size() <= 128
-        && data.gameId in ['spin_wheel', 'scratch_card', 'quiz', 'tap_challenge']
-        && data.score is number && data.score >= 0
-        && data.createdAt is string && data.createdAt.size() <= 50
-        && data.coinsEarned is number && data.coinsEarned >= 0;
+      return (!('sessionId' in data) || data.sessionId == null || (data.sessionId is string && data.sessionId.size() <= 128))
+        && (!('uid' in data) || data.uid == null || (data.uid is string && data.uid.size() <= 128))
+        && (!('gameId' in data) || data.gameId == null || (data.gameId == 'spin_wheel' || data.gameId == 'scratch_card' || data.gameId == 'quiz' || data.gameId == 'tap_challenge' || data.gameId == 'puzzle'))
+        && (!('score' in data) || data.score == null || (data.score >= 0))
+        && (!('createdAt' in data) || data.createdAt == null || (data.createdAt is string && data.createdAt.size() <= 50))
+        && (!('coinsEarned' in data) || data.coinsEarned == null || (data.coinsEarned >= 0));
     }
 
     function isValidWithdrawal(data) {
-      return data.keys().hasAll(['requestId', 'uid', 'userName', 'userEmail', 'amountCoins', 'paymentMethod', 'paymentDetails', 'status', 'createdAt'])
-        && data.keys().size() <= 11
-        && data.requestId is string && data.requestId.size() <= 128
-        && data.uid is string && data.uid.size() <= 128
-        && data.userName is string && data.userName.size() <= 256
-        && data.userEmail is string && data.userEmail.size() <= 256
-        && data.amountCoins is number && data.amountCoins > 0
-        && data.paymentMethod is string && data.paymentMethod.size() <= 100
-        && data.paymentDetails is string && data.paymentDetails.size() <= 1000
-        && data.status in ['pending', 'approved', 'rejected']
-        && data.createdAt is string && data.createdAt.size() <= 50;
+      return (!('requestId' in data) || data.requestId == null || (data.requestId is string && data.requestId.size() <= 128))
+        && (!('uid' in data) || data.uid == null || (data.uid is string && data.uid.size() <= 128))
+        && (!('userName' in data) || data.userName == null || (data.userName is string && data.userName.size() <= 256))
+        && (!('userEmail' in data) || data.userEmail == null || (data.userEmail is string && data.userEmail.size() <= 256))
+        && (!('amountCoins' in data) || data.amountCoins == null || (data.amountCoins > 0))
+        && (!('paymentMethod' in data) || data.paymentMethod == null || (data.paymentMethod is string && data.paymentMethod.size() <= 100))
+        && (!('paymentDetails' in data) || data.paymentDetails == null || (data.paymentDetails is string && data.paymentDetails.size() <= 1000))
+        && (!('status' in data) || data.status == null || (data.status == 'pending' || data.status == 'approved' || data.status == 'rejected'))
+        && (!('createdAt' in data) || data.createdAt == null || (data.createdAt is string && data.createdAt.size() <= 50));
     }
 
     // ----------------------------------------------------
@@ -113,10 +103,13 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if isSignedIn(); // Allow profile reading for scoreboard/display search, but email filtering remains protected
-      allow create: if isOwner(uid) && isValidUser(incoming()) && incoming().coins <= 50 && incoming().createdAt is string && incoming().createdAt.size() <= 50;
+      allow create: if isOwner(uid) && isValidUser(incoming()) 
+                     && ('uid' in incoming())
+                     && ('name' in incoming())
+                     && ('coins' in incoming())
+                     && incoming().coins <= 50 
+                     && ('createdAt' in incoming() && incoming().createdAt is string && incoming().createdAt.size() <= 50);
       allow update: if (isOwner(uid) || isAdmin()) && isValidUser(incoming())
-                     && incoming().uid == existing().uid
-                     && incoming().createdAt == existing().createdAt
                      && (
                        isAdmin() ||
                        incoming().diff(existing()).affectedKeys().hasOnly(['coins', 'referredBy', 'lastLogin', 'name', 'photoURL', 'isActive', 'lastLoginCoinClaimedDate', 'adsWatchedToday', 'lastAdWatchedAt'])
@@ -125,26 +118,64 @@ service cloud.firestore {
 
     match /transactions/{transactionId} {
       allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && (incoming().uid == request.auth.uid || isAdmin()) && isValidTransaction(incoming()) && incoming().createdAt is string && incoming().createdAt.size() <= 50;
-      allow update, delete: if false;
+      allow create: if isSignedIn() && (incoming().uid == request.auth.uid || isAdmin()) 
+                    && isValidTransaction(incoming()) 
+                    && ('transactionId' in incoming()) 
+                    && ('uid' in incoming()) 
+                    && ('type' in incoming()) 
+                    && ('coins' in incoming()) 
+                    && ('createdAt' in incoming()) 
+                    && ('source' in incoming());
+      allow update: if isSignedIn() && (incoming().uid == request.auth.uid || isAdmin()) 
+                    && isValidTransaction(incoming()) 
+                    && (incoming() == existing() || isAdmin());
+      allow delete: if false;
     }
 
     match /referrals/{referralId} {
       allow read: if isSignedIn() && (resource.data.referrerUid == request.auth.uid || resource.data.newUserUid == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && (incoming().referrerUid == request.auth.uid || incoming().newUserUid == request.auth.uid || isAdmin()) && isValidReferral(incoming()) && incoming().createdAt is string && incoming().createdAt.size() <= 50;
-      allow update, delete: if false;
+      allow create: if isSignedIn() && (incoming().referrerUid == request.auth.uid || incoming().newUserUid == request.auth.uid || isAdmin()) 
+                    && isValidReferral(incoming()) 
+                    && ('referralId' in incoming())
+                    && ('referrerUid' in incoming())
+                    && ('newUserUid' in incoming())
+                    && ('createdAt' in incoming())
+                    && ('rewardGranted' in incoming());
+      allow update: if isSignedIn() && (incoming().referrerUid == request.auth.uid || incoming().newUserUid == request.auth.uid || isAdmin()) 
+                    && isValidReferral(incoming()) && (incoming() == existing() || isAdmin());
+      allow delete: if false;
     }
 
     match /game_sessions/{sessionId} {
       allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && (incoming().uid == request.auth.uid || isAdmin()) && isValidGameSession(incoming()) && incoming().createdAt is string && incoming().createdAt.size() <= 50;
-      allow update, delete: if false;
+      allow create: if isSignedIn() && (incoming().uid == request.auth.uid || isAdmin()) 
+                    && isValidGameSession(incoming()) 
+                    && ('sessionId' in incoming())
+                    && ('uid' in incoming())
+                    && ('gameId' in incoming())
+                    && ('score' in incoming())
+                    && ('createdAt' in incoming())
+                    && ('coinsEarned' in incoming());
+      allow update: if isSignedIn() && (incoming().uid == request.auth.uid || isAdmin()) 
+                    && isValidGameSession(incoming()) && (incoming() == existing() || isAdmin());
+      allow delete: if false;
     }
 
     match /withdrawals/{requestId} {
       allow get: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
       allow list: if isSignedIn() && (resource.data.uid == request.auth.uid || request.auth.token.email == 'game.rewardyn@gmail.com' || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
-      allow create: if isSignedIn() && (incoming().uid == request.auth.uid || isAdmin()) && isValidWithdrawal(incoming()) && incoming().status == 'pending' && incoming().createdAt is string && incoming().createdAt.size() <= 50;
+      allow create: if isSignedIn() && (incoming().uid == request.auth.uid || isAdmin()) 
+                    && isValidWithdrawal(incoming()) 
+                    && ('requestId' in incoming())
+                    && ('uid' in incoming())
+                    && ('userName' in incoming())
+                    && ('userEmail' in incoming())
+                    && ('amountCoins' in incoming())
+                    && ('paymentMethod' in incoming())
+                    && ('paymentDetails' in incoming())
+                    && ('status' in incoming())
+                    && ('createdAt' in incoming())
+                    && incoming().status == 'pending';
       allow update: if isAdmin();
       allow delete: if false;
     }
