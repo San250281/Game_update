@@ -8,6 +8,7 @@ import { useRewardEngine, DEFAULT_ADS } from '../lib/store';
 import { AdOffer } from '../types';
 import { Play, Sparkles, Clock, MonitorPlay, AlertCircle, CheckCircle, ShieldCheck, Video } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import RewardButton from './RewardButton';
 
 export default function AdCenter() {
   const { watchAd, cooldowns } = useRewardEngine();
@@ -83,7 +84,7 @@ export default function AdCenter() {
   };
 
   return (
-    <div className="bg-[#12141c] border border-[#232835] rounded-3xl p-6 relative overflow-hidden shadow-2xl max-w-lg mx-auto">
+    <div className="bg-[#12141c] border border-[#232835] rounded-3xl p-6 relative overflow-hidden shadow-2xl max-w-xl mx-auto">
       {/* Background decoration blur overlay */}
       <div className="absolute top-0 left-0 w-36 h-36 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
 
@@ -98,7 +99,17 @@ export default function AdCenter() {
         </div>
       </div>
 
+      {/* Primary Mandatory Cooldown Instant Reward Button */}
+      <div className="mb-6">
+        <RewardButton />
+      </div>
+
       {/* Campaign offer grids */}
+      <div className="mt-4 border-t border-slate-800/80 pt-5">
+        <h4 className="text-xs font-black text-slate-400 mb-3.5 uppercase tracking-wider flex items-center gap-1.5">
+          <Video className="w-4 h-4 text-emerald-400" /> Additional Sponsor Campaigns
+        </h4>
+      </div>
       <div className="flex flex-col gap-3.5">
         {DEFAULT_ADS.map((offer) => {
           const isCooldown = (cooldownTimers[offer.id] || 0) > 0;

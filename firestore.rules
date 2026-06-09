@@ -42,22 +42,23 @@ service cloud.firestore {
     // Entites Schema Validations
     // ----------------------------------------------------
     function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'name', 'email', 'photoURL', 'provider', 'coins', 'referralCode', 'createdAt', 'isActive'])
-        && data.keys().size() <= 15
+      return data.keys().hasAll(['uid', 'name', 'email', 'photoURL', 'provider', 'coins', 'createdAt'])
+        && data.keys().size() <= 17
         && data.uid is string && data.uid.size() <= 128
         && data.name is string && data.name.size() <= 256
         && data.email is string && data.email.size() <= 256
         && data.photoURL is string && data.photoURL.size() <= 2000
-        && data.provider in ['google', 'facebook', 'email', 'guest']
+        && data.provider is string && data.provider.size() <= 100
         && data.coins is number && data.coins >= 0
-        && data.referralCode is string && data.referralCode.size() <= 100
         && data.createdAt is string && data.createdAt.size() <= 50
-        && data.isActive is bool
+        && (!('referralCode' in data) || (data.referralCode is string && data.referralCode.size() <= 100))
+        && (!('isActive' in data) || data.isActive is bool)
         && (!('lastLogin' in data) || (data.lastLogin is string && data.lastLogin.size() <= 100))
         && (!('lastLoginCoinClaimedDate' in data) || (data.lastLoginCoinClaimedDate is string && data.lastLoginCoinClaimedDate.size() <= 100))
         && (!('adsWatchedToday' in data) || (data.adsWatchedToday is number && data.adsWatchedToday >= 0))
         && (!('lastAdWatchedAt' in data) || (data.lastAdWatchedAt is string && data.lastAdWatchedAt.size() <= 100))
-        && (!('referredBy' in data) || (data.referredBy is string && data.referredBy.size() <= 128));
+        && (!('referredBy' in data) || (data.referredBy is string && data.referredBy.size() <= 128))
+        && (!('isAdmin' in data) || data.isAdmin is bool);
     }
 
     function isValidTransaction(data) {
@@ -68,7 +69,7 @@ service cloud.firestore {
         && data.type in ['credit', 'debit']
         && data.coins is number && data.coins >= 0
         && data.createdAt is string && data.createdAt.size() <= 50
-        && data.source in ['game', 'ad', 'referral', 'bonus', 'admin'];
+        && data.source in ['game', 'ad', 'referral', 'bonus', 'admin', 'withdrawal'];
     }
 
     function isValidReferral(data) {

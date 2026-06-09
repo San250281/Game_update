@@ -70,6 +70,7 @@ export const SEED_COMPETITORS: UserProfile[] = [
 ];
 
 export const DEFAULT_ADS: AdOffer[] = [
+  { id: 'ad_instant', title: 'Monetag Quick Rev Ad Boost', rewardValue: 25, cooldownSeconds: 5, type: 'rewarded' },
   { id: 'ad_1', title: 'Spinwheel Sponsor Reward Video', rewardValue: 150, cooldownSeconds: 30, type: 'rewarded' },
   { id: 'ad_2', title: 'Casual Gaming App Download Pitch', rewardValue: 200, cooldownSeconds: 45, type: 'rewarded' },
   { id: 'ad_3', title: 'Quick Coin Booster Survey', rewardValue: 250, cooldownSeconds: 60, type: 'rewarded' },
