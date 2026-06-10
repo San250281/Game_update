@@ -69,8 +69,15 @@ export const SEED_COMPETITORS: UserProfile[] = [
   },
 ];
 
-export const DEFAULT_ADS: AdOffer[] = [];
-
+export const DEFAULT_ADS: AdOffer[] = [ 
+					{ 
+						id: 'placeholder', 
+						title: 'Coming Soon', 
+						rewardValue: 0, 
+						cooldownSeconds: 0, 
+						type: 'rewarded'
+					 } 
+					];
 
 export interface AuditLog {
   id: string;
