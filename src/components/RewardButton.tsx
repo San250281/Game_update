@@ -96,8 +96,14 @@ export default function RewardButton() {
       if (leftMs <= 0) {
         if (cooldownIntervalRef.current) clearInterval(cooldownIntervalRef.current);
         localStorage.removeItem('ad_cooldown_until');
-        setStatus('ready');
+        
+        // Complete clean state reset after cooldown expires
+        setLoadSecondsLeft(10);
+        isClickingRef.current = false;
+        localStorage.removeItem('ad_verification_start');
+        localStorage.removeItem('ad_verification_status');
         setCooldownSecondsLeft(5);
+        setStatus('ready');
         setToast(null);
       } else {
         setStatus('cooldown');
@@ -159,6 +165,13 @@ export default function RewardButton() {
         return; // Cooldown takes absolute precedence
       } else {
         localStorage.removeItem('ad_cooldown_until');
+        // Complete clean state reset if cooldown has already expired
+        setLoadSecondsLeft(10);
+        isClickingRef.current = false;
+        localStorage.removeItem('ad_verification_start');
+        localStorage.removeItem('ad_verification_status');
+        setCooldownSecondsLeft(5);
+        setStatus('ready');
       }
     }
 
@@ -222,13 +235,13 @@ export default function RewardButton() {
     };
   }, []);
 
+  // Explicit state change debugging log
+  useEffect(() => {
+    console.log("Reward Status Changed:", status);
+  }, [status]);
+
   // Launch transmission stream click event
   const handleLaunchAdStream = () => {
-    if (status === 'claimable') {
-      claimCoinsRewardTransaction();
-      return;
-    }
-
     if (isClickingRef.current || status !== 'ready' || !user) return;
 
     // Strict validation check of daily limit block before proceeding
@@ -282,7 +295,34 @@ export default function RewardButton() {
 
   // Securely request coins registration upon video finish checks
   const claimCoinsRewardTransaction = async () => {
-    if (status !== 'claimable') return; // Strict prevent duplicate claims
+    if (status !== 'claimable') {
+      console.log("Claim aborted: status is not claimable", status);
+      return; // Strict prevent duplicate claims
+    }
+
+    if (!user) {
+      setToast({
+        type: 'error',
+        message: 'You must be signed in to claim rewards.'
+      });
+      return;
+    }
+
+    // Strict validation check of daily limit block before proceeding
+    const todayStr = new Date().toISOString().split('T')[0];
+    let adsWatchedToday = user.adsWatchedToday || 0;
+    const lastAdWatchedAt = user.lastAdWatchedAt || '';
+    if (lastAdWatchedAt && lastAdWatchedAt.split('T')[0] !== todayStr) {
+      adsWatchedToday = 0;
+    }
+
+    if (adsWatchedToday >= 40) {
+      setToast({
+        type: 'error',
+        message: 'Daily Sponsor limit reached! You can watch a maximum of 40 ads per day.'
+      });
+      return;
+    }
 
     try {
       // Execute live cloud / mock reward claim against secure database service layers
@@ -412,7 +452,7 @@ export default function RewardButton() {
             <Coins className="w-3.5 h-3.5 fill-amber-500" />
             +{REWARD_VALUE} Coins
           </span>
-          <span className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider">No Limits</span>
+          <span className="text-[10px] text-amber-400 font-black uppercase tracking-wider bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">Daily Limit: 40 Ads</span>
         </div>
       </div>
 
