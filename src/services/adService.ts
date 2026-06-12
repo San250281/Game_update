@@ -4,7 +4,7 @@
  */
 
 import { collection, doc, runTransaction, serverTimestamp } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { UserProfile } from '../types';
 
 // Strict Reward Economy Constants
@@ -21,6 +21,16 @@ export const saveAdWatchInDb = async (
   adsWatchedToday: number,
   lastAdWatchedAt: string
 ): Promise<void> => {
+  console.log("saveAdWatchInDb starting", {
+    userId,
+    txId,
+    txPayload,
+    coins,
+    adsWatchedToday,
+    lastAdWatchedAt,
+    authUid: auth?.currentUser?.uid,
+    authEmail: auth?.currentUser?.email
+  });
   try {
     await runTransaction(db, async (transaction) => {
       const userRef = doc(db, 'users', userId);
@@ -44,12 +54,8 @@ export const saveAdWatchInDb = async (
         throw new Error('Daily Ad Limit Reached');
       }
 
-      // Prevent duplicate claims by checking if transaction ID exists
+      // Generate the fresh transaction reference
       const txRef = doc(collection(db, 'transactions'), txId);
-      const txSnapshot = await transaction.get(txRef);
-      if (txSnapshot.exists()) {
-        throw new Error('Ad reward already claimed.');
-      }
 
       const currentCoins = userData.coins || 0;
       const verifiedNextCoins = currentCoins + AD_REWARD;
