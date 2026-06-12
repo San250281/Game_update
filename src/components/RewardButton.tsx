@@ -550,7 +550,7 @@ export default function RewardButton() {
         {status === 'cooldown' && (
           <div className="absolute bottom-0 inset-x-4 h-1 rounded-full overflow-hidden z-10 bg-slate-950/65">
             <motion.div 
-              className="h-full bg-amber-550"
+              className="h-full bg-amber-500"
               initial={{ width: `${(cooldownSecondsLeft / 5) * 100}%` }}
               animate={{ width: `${(cooldownSecondsLeft / 5) * 100}%` }}
               transition={{ duration: 1, ease: 'linear' }}
