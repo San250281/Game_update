@@ -3,31 +3,70 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { collection, doc, writeBatch } from 'firebase/firestore';
+import { collection, doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { WalletTransaction, UserProfile } from '../types';
+import { UserProfile } from '../types';
+
+// Strict Reward Economy Constants
+export const DAILY_AD_LIMIT = 40;
+export const AD_REWARD = 10;
+export const AD_WAIT_TIME = 10;
+export const COOLDOWN_SECONDS = 5;
 
 export const saveAdWatchInDb = async (
   userId: string,
   txId: string,
-  tx: WalletTransaction,
+  txPayload: any,
   coins: number,
   adsWatchedToday: number,
   lastAdWatchedAt: string
 ): Promise<void> => {
   try {
-    const batch = writeBatch(db);
-    const txRef = doc(collection(db, 'transactions'), txId);
-    const userRef = doc(db, 'users', userId);
+    await runTransaction(db, async (transaction) => {
+      const userRef = doc(db, 'users', userId);
+      const userSnapshot = await transaction.get(userRef);
+      if (!userSnapshot.exists()) {
+        throw new Error('User profile does not exist.');
+      }
 
-    batch.set(txRef, tx);
-    batch.update(userRef, {
-      coins,
-      adsWatchedToday,
-      lastAdWatchedAt
+      const userData = userSnapshot.data();
+      let currentAdsWatchedToday = userData.adsWatchedToday || 0;
+      const dbLastAdWatchedAt = userData.lastAdWatchedAt || '';
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      // Reset daily counter on database level if day transition occurred
+      if (dbLastAdWatchedAt && dbLastAdWatchedAt.split('T')[0] !== todayStr) {
+        currentAdsWatchedToday = 0;
+      }
+
+      // Anti-abuse limit check in Firestore
+      if (currentAdsWatchedToday >= DAILY_AD_LIMIT) {
+        throw new Error('Daily Ad Limit Reached');
+      }
+
+      // Prevent duplicate claims by checking if transaction ID exists
+      const txRef = doc(collection(db, 'transactions'), txId);
+      const txSnapshot = await transaction.get(txRef);
+      if (txSnapshot.exists()) {
+        throw new Error('Ad reward already claimed.');
+      }
+
+      const currentCoins = userData.coins || 0;
+      const verifiedNextCoins = currentCoins + AD_REWARD;
+
+      // Add transaction history with Server Timestamp
+      transaction.set(txRef, {
+        ...txPayload,
+        timestamp: serverTimestamp()
+      });
+
+      // Update User balance, ad counts, and last watch time
+      transaction.update(userRef, {
+        coins: verifiedNextCoins,
+        adsWatchedToday: currentAdsWatchedToday + 1,
+        lastAdWatchedAt
+      });
     });
-
-    await batch.commit();
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `transactions/${txId}`);
   }
@@ -43,11 +82,11 @@ export const checkAdWatchEligibility = (
   // 1. Double check delay since last ad (5 seconds required)
   if (lastAdWatchedAt) {
     const elapsed = Date.now() - new Date(lastAdWatchedAt).getTime();
-    if (elapsed < 5050) {
-      const remainingDelay = Math.ceil((5050 - elapsed) / 1000);
+    if (elapsed < COOLDOWN_SECONDS * 1000) {
+      const remainingDelay = Math.ceil((COOLDOWN_SECONDS * 1000 - elapsed) / 1000);
       return {
         eligible: false,
-        message: `Please wait ${remainingDelay} second(s) between ads as required by Monetag.`,
+        message: `Please wait ${remainingDelay} second(s) between ads.`,
         cleanAdsWatchedToday
       };
     }
@@ -58,11 +97,11 @@ export const checkAdWatchEligibility = (
     cleanAdsWatchedToday = 0;
   }
 
-  // 3. Max active watches (20 plays cap)
-  if (cleanAdsWatchedToday >= 20) {
+  // 3. Max active watches (40 plays cap)
+  if (cleanAdsWatchedToday >= DAILY_AD_LIMIT) {
     return {
       eligible: false,
-      message: 'Daily Monetag limit reached! You can watch a maximum of 20 ads per day.',
+      message: `Daily Sponsor limit reached! You can watch a maximum of ${DAILY_AD_LIMIT} ads per day.`,
       cleanAdsWatchedToday
     };
   }

@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import RewardButton from './RewardButton';
 
 export default function AdCenter() {
-  const { watchAd, cooldowns } = useRewardEngine();
+  const { watchAd, cooldowns, user } = useRewardEngine();
   const [activeAd, setActiveAd] = useState<AdOffer | null>(null);
   const [adTimer, setAdTimer] = useState(0);
   const [countdownActive, setCountdownActive] = useState(false);
@@ -19,6 +19,47 @@ export default function AdCenter() {
   const [cooldownTimers, setCooldownTimers] = useState<{ [key: string]: number }>({});
   const [toast, setToast] = useState<string | null>(null);
   const [selectedSurveyOption, setSelectedSurveyOption] = useState<string | null>(null);
+
+  // Dynamically load Monetag scripts ONLY when on this tab, and clean them up on unmount
+  useEffect(() => {
+    const scriptsToLoad = [
+      { src: 'https://n6wxm.com/vignette.min.js', zone: '11126645' },
+      { src: 'https://n6wxm.com/vignette.min.js', zone: '11126633' },
+      { src: 'https://nap5k.com/tag.min.js', zone: '11126625' },
+      { src: 'https://quge5.com/88/tag.min.js', zone: '248180', async: true, cfasync: 'false' },
+    ];
+
+    const loadedScripts: HTMLScriptElement[] = [];
+
+    scriptsToLoad.forEach((item) => {
+      // Avoid duplicating the script if it was somehow already loaded
+      const querySelector = `script[src="${item.src}"][data-zone="${item.zone}"]`;
+      if (document.querySelector(querySelector)) return;
+
+      const script = document.createElement('script');
+      script.src = item.src;
+      script.dataset.zone = item.zone;
+      if (item.async) {
+        script.async = true;
+      }
+      if (item.cfasync) {
+        script.setAttribute('data-cfasync', item.cfasync);
+      }
+      script.className = 'monetag-dynamic-ad-script';
+      
+      document.body.appendChild(script);
+      loadedScripts.push(script);
+    });
+
+    return () => {
+      // Clean up the scripts on component unmount
+      loadedScripts.forEach((script) => {
+        if (script.parentNode) {
+          script.parentNode.removeChild(script);
+        }
+      });
+    };
+  }, []);
 
   // Monitor cooldown remaining times in real time
   useEffect(() => {
@@ -63,8 +104,25 @@ export default function AdCenter() {
     const cd = cooldownTimers[offer.id] || 0;
     if (cd > 0) return;
 
+    // Direct Lazy Loading of Monetag Ads on WATCH click (Point 2 & 9)
+    try {
+      const monetagDomains = ['https://n6wxm.com/vignette.min.js', 'https://quge5.com/88/tag.min.js'];
+      monetagDomains.forEach((src) => {
+        if (!document.querySelector(`script[src="${src}"]`)) {
+          const script = document.createElement('script');
+          script.src = src;
+          script.async = true;
+          script.dataset.zone = src.includes('vignette') ? '11126645' : '248180';
+          script.className = 'monetag-lazy-ad-script';
+          document.head.appendChild(script);
+        }
+      });
+    } catch (e) {
+      console.error('Lazy loading Monetag script failed:', e);
+    }
+
     setActiveAd(offer);
-    setAdTimer(10); // 10 seconds of high-fidelity simulated interstitial preview
+    setAdTimer(20); // 20 Second Countdown Starts (Point 3 Expected Flow)
     setAdStage('video');
     setCountdownActive(true);
     setToast(null);
@@ -74,11 +132,16 @@ export default function AdCenter() {
   const handleClaimReward = async () => {
     if (!activeAd) return;
 
-    const result = await watchAd(activeAd.id);
-    if (result.success) {
-      setToast(result.message);
-    } else {
-      setToast('Claim Error: Ad connection timed out.');
+    try {
+      const result = await watchAd(activeAd.id);
+      if (result.success) {
+        setToast(result.message);
+      } else {
+        setToast(result.message || 'Claim Error: Ad connection timed out.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setToast('Error claiming coins from ledger.');
     }
 
     setCountdownActive(false);
@@ -270,6 +333,34 @@ export default function AdCenter() {
         <div>
           <h2 className="text-lg font-black text-white">Sponsor Ad Hub</h2>
           <p className="text-[11px] text-gray-400">Boost your balance by completing quick sponsor activities and videos</p>
+        </div>
+      </div>
+
+      {/* Daily Progress Tracker Card */}
+      <div className="mb-5 bg-emerald-950/20 border border-emerald-500/20 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+        <div>
+          <div className="flex items-center gap-1.5 font-bold text-white mb-1">
+            <Coins className="w-4 h-4 text-amber-400 fill-amber-500" />
+            Daily Sponsor Rewards Left
+          </div>
+          <p className="text-[11px] text-zinc-400">
+            Earn up to <strong className="text-emerald-400">400 Coins</strong> daily by watching sponsor streams.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 text-right">
+          <div>
+            <div className="text-[10px] uppercase text-zinc-500 font-extrabold">Completed Today</div>
+            <div className="text-sm font-black text-emerald-400">
+              {user ? user.adsWatchedToday || 0 : 0} / 40 <span className="text-[10px] text-zinc-400 font-normal">Ads</span>
+            </div>
+          </div>
+          <div className="h-8 w-px bg-slate-800 shrink-0" />
+          <div>
+            <div className="text-[10px] uppercase text-zinc-500 font-extrabold">Coins Earned</div>
+            <div className="text-sm font-black text-amber-500">
+              {Math.min(400, (user ? user.adsWatchedToday || 0 : 0) * 10)} / 400 <span className="text-[10px] text-zinc-400 font-normal">Coins</span>
+            </div>
+          </div>
         </div>
       </div>
 

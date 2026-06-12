@@ -62,9 +62,12 @@ service cloud.firestore {
     function isValidTransaction(data) {
       return (!('transactionId' in data) || data.transactionId == null || (data.transactionId is string && data.transactionId.size() <= 128))
         && (!('uid' in data) || data.uid == null || (data.uid is string && data.uid.size() <= 128))
-        && (!('type' in data) || data.type == null || (data.type == 'credit' || data.type == 'debit'))
+        && (!('type' in data) || data.type == null || (data.type == 'credit' || data.type == 'debit' || data.type == 'SPONSOR_AD'))
         && (!('coins' in data) || data.coins == null || (data.coins >= 0))
-        && (!('createdAt' in data) || data.createdAt == null || (data.createdAt is string && data.createdAt.size() <= 50))
+        && (!('reward' in data) || data.reward == null || (data.reward >= 0))
+        && (!('createdAt' in data) || data.createdAt == null || (data.createdAt is string && data.createdAt.size() <= 100))
+        && (!('timestamp' in data) || data.timestamp == null || data.timestamp is timestamp || (data.timestamp is string && data.timestamp.size() <= 100))
+        && (!('adId' in data) || data.adId == null || (data.adId is string && data.adId.size() <= 128))
         && (!('source' in data) || data.source == null || (data.source == 'game' || data.source == 'ad' || data.source == 'referral' || data.source == 'bonus' || data.source == 'admin' || data.source == 'withdrawal'));
     }
 

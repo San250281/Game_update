@@ -69,15 +69,36 @@ export const SEED_COMPETITORS: UserProfile[] = [
   },
 ];
 
-export const DEFAULT_ADS: AdOffer[] = [ 
-					{ 
-						id: 'placeholder', 
-						title: 'Coming Soon', 
-						rewardValue: 0, 
-						cooldownSeconds: 0, 
-						type: 'rewarded'
-					 } 
-					];
+export const DEFAULT_ADS: AdOffer[] = [
+  {
+    id: 'ad_instant',
+    title: 'Instant Monetag Booster',
+    rewardValue: 10,
+    cooldownSeconds: 5,
+    type: 'rewarded'
+  },
+  {
+    id: 'ad_1',
+    title: 'Arcade Slot Casino Sponsor',
+    rewardValue: 10,
+    cooldownSeconds: 5,
+    type: 'rewarded'
+  },
+  {
+    id: 'ad_2',
+    title: 'Casual Gaming Play Store Pitch',
+    rewardValue: 10,
+    cooldownSeconds: 5,
+    type: 'rewarded'
+  },
+  {
+    id: 'ad_3',
+    title: 'Smart Booster Poll & Survey',
+    rewardValue: 10,
+    cooldownSeconds: 5,
+    type: 'rewarded'
+  }
+];
 
 export interface AuditLog {
   id: string;

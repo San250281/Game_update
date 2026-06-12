@@ -1179,28 +1179,54 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       return { success: false, reward: 0, message: 'Invalid ad network campaign target.' };
     }
 
+    // Set cooldown (5 seconds after claim as specified)
     const updatedCooldowns = {
       ...cooldowns,
-      [`cooldown_${adId}`]: Date.now() + (offer.cooldownSeconds * 1000)
+      [`cooldown_${adId}`]: Date.now() + (5 * 1000)
     };
     setCooldowns(updatedCooldowns);
 
     const txId = 'tx_ad_' + Math.random().toString(36).substring(2, 15);
-    const newTx: WalletTransaction = {
-      transactionId: txId,
-      uid: user.uid,
-      type: TransactionType.CREDIT,
-      coins: offer.rewardValue,
-      source: TransactionSource.AD,
-      createdAt: new Date().toISOString()
-    };
-
-    const nextCoins = user.coins + offer.rewardValue;
-    const nextAdsCount = cleanAdsWatchedToday + 1;
     const lastAdWatchedAt = new Date().toISOString();
 
+    // Conform exactly to Transaction Ledger Requirement (Point 6)
+    // while keeping compatible backing fields to avoid breaking the local render systems
+    const txPayload = {
+      transactionId: txId,
+      uid: user.uid,
+      type: 'SPONSOR_AD', // "SPONSOR_AD" as explicitly requested
+      coins: 10,          // Conforms to 10 Coins Per Ad reward
+      reward: 10,         // Conforms to 10 Coins Per Ad reward
+      source: 'ad',       // Conforms to Transaction validations
+      createdAt: lastAdWatchedAt,
+      adId: adId
+    };
+
+    const nextCoins = user.coins + 10;
+    const nextAdsCount = cleanAdsWatchedToday + 1;
+
     if (isFirebaseLive && !isMockUid(user.uid)) {
-      await saveAdWatchInDb(user.uid, txId, newTx, nextCoins, nextAdsCount, lastAdWatchedAt);
+      try {
+        await saveAdWatchInDb(user.uid, txId, txPayload, nextCoins, nextAdsCount, lastAdWatchedAt);
+      } catch (dbErr: any) {
+        console.error("Firestore Ad Watch Save Error: ", dbErr);
+        let errMsg = "Failed to update balance on the cloud server. Please try again.";
+        if (dbErr && dbErr.message) {
+          try {
+            const parsed = JSON.parse(dbErr.message);
+            if (parsed && parsed.error) {
+              errMsg = `Ledger update failed: ${parsed.error}`;
+            }
+          } catch (_) {
+            errMsg = `Ledger update failed: ${dbErr.message}`;
+          }
+        }
+        return {
+          success: false,
+          reward: 0,
+          message: errMsg
+        };
+      }
     }
 
     const updatedUser: UserProfile = {
@@ -1213,7 +1239,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     setUser(updatedUser);
     localStorage.setItem('rg_user_session', JSON.stringify(updatedUser));
 
-    const updatedTxList = [newTx, ...transactions];
+    const updatedTxList = [txPayload as WalletTransaction, ...transactions];
     setTransactions(updatedTxList);
 
     const updatedUsersList = allUsers.map(u => u.uid === user.uid ? updatedUser : u);
@@ -1224,8 +1250,8 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
 
     return {
       success: true,
-      reward: offer.rewardValue,
-      message: `Monetag Ad successfully watched! Claimed ${offer.rewardValue} Coins. (${nextAdsCount}/20 today)`
+      reward: 10,
+      message: `Monetag Ad successfully watched! Claimed 10 Coins. (${nextAdsCount}/40 today)`
     };
   };
 

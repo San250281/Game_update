@@ -8,9 +8,9 @@ import { useRewardEngine } from '../lib/store';
 import { Play, Sparkles, Clock, CheckCircle2, ShieldAlert, Coins, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-const AD_REWARD_DELAY = 15000; // 15 seconds watching delay
-const AD_COOLDOWN = 5000; // 5 seconds mandatory cooldown
-const REWARD_VALUE = 25;
+const AD_REWARD_DELAY = 10000; // 10 seconds watching delay (conforms to AD_WAIT_TIME = 10)
+const AD_COOLDOWN = 5000; // 5 seconds mandatory cooldown (conforms to COOLDOWN_SECONDS = 5)
+const REWARD_VALUE = 10; // Conforms to 10 Coins Per Ad reward
 
 interface ConfettiParticle {
   id: number;
@@ -24,9 +24,9 @@ interface ConfettiParticle {
 export default function RewardButton() {
   const { watchAd, user } = useRewardEngine();
   
-  // States: 'ready' | 'loading' | 'rewarded' | 'cooldown'
-  const [status, setStatus] = useState<'ready' | 'loading' | 'rewarded' | 'cooldown'>('ready');
-  const [loadSecondsLeft, setLoadSecondsLeft] = useState(15);
+  // States: 'ready' | 'loading' | 'claimable' | 'rewarded' | 'cooldown'
+  const [status, setStatus] = useState<'ready' | 'loading' | 'claimable' | 'rewarded' | 'cooldown'>('ready');
+  const [loadSecondsLeft, setLoadSecondsLeft] = useState(10);
   const [cooldownSecondsLeft, setCooldownSecondsLeft] = useState(5);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [particles, setParticles] = useState<ConfettiParticle[]>([]);
@@ -109,35 +109,107 @@ export default function RewardButton() {
     cooldownIntervalRef.current = setInterval(tick, 500);
   };
 
-  // Main lifecycle check: mounting, resuming, and visual synchronization
-  useEffect(() => {
-    // 1. Restore stale cooldown timer after accidental page load/tab return
+  // Active validation & recovery synchronizer (eliminates timer pausing bugs)
+  const startVerificationCountdown = (startTime: number) => {
+    if (loadIntervalRef.current) clearInterval(loadIntervalRef.current);
+
+    const tick = () => {
+      const now = Date.now();
+      const elapsed = now - startTime;
+      const left = Math.max(0, Math.ceil((AD_REWARD_DELAY - elapsed) / 1000));
+
+      setLoadSecondsLeft(left);
+
+      // Critical debug logging
+      console.log("Reward Status: loading");
+      console.log("Verification Elapsed:", elapsed);
+      console.log("Claim Button Enabled: false");
+
+      if (elapsed >= AD_REWARD_DELAY) {
+        if (loadIntervalRef.current) clearInterval(loadIntervalRef.current);
+        setStatus('claimable');
+        localStorage.setItem('ad_verification_status', 'claimable');
+        
+        console.log("Reward Status: claimable");
+        console.log("Verification Elapsed:", elapsed);
+        console.log("Claim Button Enabled: true");
+
+        setToast({
+          type: 'success',
+          message: 'Verification Complete! Click the "CLAIM 10 COINS" button below.'
+        });
+      }
+    };
+
+    tick();
+    loadIntervalRef.current = setInterval(tick, 250);
+  };
+
+  const syncStateFromStorage = () => {
+    // If status is "rewarded", hold celebratory view state
+    if (status === 'rewarded') return;
+
+    // 1. Check if cooldown timer is active
     const savedCooldownUntil = localStorage.getItem('ad_cooldown_until');
     if (savedCooldownUntil) {
       const expiresAt = parseInt(savedCooldownUntil, 10);
       if (expiresAt > Date.now()) {
         setStatus('cooldown');
         startCooldownTimer(expiresAt);
+        return; // Cooldown takes absolute precedence
       } else {
         localStorage.removeItem('ad_cooldown_until');
       }
     }
 
-    // 2. Tab Visibility Focus Sync - Refreshes timer state dynamically if tab was minimized
+    // 2. Check if a verification is currently ongoing or claimable
+    const savedStartStr = localStorage.getItem('ad_verification_start');
+    const savedStatus = localStorage.getItem('ad_verification_status');
+
+    if (savedStartStr) {
+      const start = parseInt(savedStartStr, 10);
+      const now = Date.now();
+      const elapsed = now - start;
+
+      console.log("Reward Status:", savedStatus || "loading");
+      console.log("Verification Elapsed:", elapsed);
+
+      if (elapsed >= AD_REWARD_DELAY) {
+        // Verification completes fully, unlock CLAIM button directly
+        setStatus('claimable');
+        localStorage.setItem('ad_verification_status', 'claimable');
+        setLoadSecondsLeft(0);
+        if (loadIntervalRef.current) clearInterval(loadIntervalRef.current);
+        console.log("Claim Button Enabled: true");
+      } else {
+        // Continue tracking elapsed countdown
+        setStatus('loading');
+        localStorage.setItem('ad_verification_status', 'loading');
+        const left = Math.max(0, Math.ceil((AD_REWARD_DELAY - elapsed) / 1000));
+        setLoadSecondsLeft(left);
+        console.log("Claim Button Enabled: false");
+
+        // Reactivate timer ticker from the persisted starting timestamp
+        startVerificationCountdown(start);
+      }
+    } else {
+      // Clean stale states to ready state
+      if (status !== 'rewarded' && status !== 'cooldown' && status !== 'loading' && status !== 'claimable') {
+        setStatus('ready');
+      }
+    }
+  };
+
+  // Main lifecycle check: mounting, resuming, and visual synchronization
+  useEffect(() => {
+    // Synchronize states on mount
+    syncStateFromStorage();
+
+    // Tab Visibility Focus Sync - Refreshes timer state dynamically if tab is returned to
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        const checkCooldown = localStorage.getItem('ad_cooldown_until');
-        if (checkCooldown) {
-          const expiresAt = parseInt(checkCooldown, 10);
-          if (expiresAt > Date.now()) {
-            startCooldownTimer(expiresAt);
-          } else {
-            if (cooldownIntervalRef.current) clearInterval(cooldownIntervalRef.current);
-            localStorage.removeItem('ad_cooldown_until');
-            setStatus('ready');
-            setCooldownSecondsLeft(5);
-          }
-        }
+        console.log("Tab returned - executing focus recovery logic...");
+        syncStateFromStorage();
       }
     };
 
@@ -152,16 +224,41 @@ export default function RewardButton() {
 
   // Launch transmission stream click event
   const handleLaunchAdStream = () => {
+    if (status === 'claimable') {
+      claimCoinsRewardTransaction();
+      return;
+    }
+
     if (isClickingRef.current || status !== 'ready' || !user) return;
-    
+
+    // Strict validation check of daily limit block before proceeding
+    const todayStr = new Date().toISOString().split('T')[0];
+    let adsWatchedToday = user.adsWatchedToday || 0;
+    const lastAdWatchedAt = user.lastAdWatchedAt || '';
+    if (lastAdWatchedAt && lastAdWatchedAt.split('T')[0] !== todayStr) {
+      adsWatchedToday = 0;
+    }
+
+    if (adsWatchedToday >= 40) {
+      setToast({
+        type: 'error',
+        message: 'Daily Sponsor limit reached! You can watch a maximum of 40 ads per day.'
+      });
+      return;
+    }
+
     isClickingRef.current = true;
     setToast(null);
 
-    // 1. Enter Loading state and initialize 15s timer
-    setStatus('loading');
-    setLoadSecondsLeft(15);
+    const startTimestamp = Date.now();
+    localStorage.setItem('ad_verification_start', startTimestamp.toString());
+    localStorage.setItem('ad_verification_status', 'loading');
 
-    // 2. Open Monetag Smartlink Direct Campaign URL in a new sandboxed tab
+    // Enter Loading state and initialize 10s timer
+    setStatus('loading');
+    setLoadSecondsLeft(10);
+
+    // Open Monetag Smartlink Direct Campaign URL in a new sandboxed tab
     try {
       const openedTab = window.open(monetagUrl, '_blank', 'noopener,noreferrer');
       if (!openedTab) {
@@ -172,66 +269,57 @@ export default function RewardButton() {
       } else {
         setToast({
           type: 'success',
-          message: 'Monetag Ad stream started in a new tab! Keep this window open for 15s.'
+          message: 'Monetag Ad stream started in a new tab! Keep this window open for 10s.'
         });
       }
     } catch (popupErr) {
       console.warn('Popup blocked:', popupErr);
     }
 
-    // Timer bypass protection
-    const startTimestamp = Date.now();
-    const expectedEndTimestamp = startTimestamp + AD_REWARD_DELAY;
-
-    loadIntervalRef.current = setInterval(() => {
-      const currentTime = Date.now();
-      const elapsed = currentTime - startTimestamp;
-      const left = Math.max(0, Math.ceil((AD_REWARD_DELAY - elapsed) / 1000));
-
-      setLoadSecondsLeft(left);
-
-      if (elapsed >= AD_REWARD_DELAY - 100) {
-        if (loadIntervalRef.current) clearInterval(loadIntervalRef.current);
-        isClickingRef.current = false;
-        claimCoinsRewardTransaction();
-      }
-    }, 250);
+    startVerificationCountdown(startTimestamp);
+    isClickingRef.current = false;
   };
 
   // Securely request coins registration upon video finish checks
   const claimCoinsRewardTransaction = async () => {
+    if (status !== 'claimable') return; // Strict prevent duplicate claims
+
     try {
       // Execute live cloud / mock reward claim against secure database service layers
       const result = await watchAd('ad_instant');
       
       if (result.success) {
-        // 1. Enter stateful Reward success state
+        // Clear verification storage to prevent restore or multi-claims
+        localStorage.removeItem('ad_verification_start');
+        localStorage.removeItem('ad_verification_status');
+
+        // Enter stateful Reward success state
         setStatus('rewarded');
         playClaimSound();
         triggerConfettiExplosion();
         setToast({
           type: 'success',
-          message: `Awesome! Earned ${REWARD_VALUE} Coins successfully in your balance.`
+          message: `🎉 +10 COINS ADDED TO YOUR WALLET`
         });
 
-        // 2. Trigger the mandatory five seconds countdown lock
+        // Trigger cooldown clock after brief success display
         setTimeout(() => {
           const cooldownExpiration = Date.now() + AD_COOLDOWN;
           localStorage.setItem('ad_cooldown_until', cooldownExpiration.toString());
           startCooldownTimer(cooldownExpiration);
-        }, 2200); // Hold celebration visual context briefly
+        }, 2200); // Celebratory hold
       } else {
-        setStatus('ready');
+        setStatus('claimable'); // Allow retry on transient error
         setToast({
           type: 'error',
-          message: result.message || 'Ad verification failure. Try reloading.'
+          message: result.message || 'Ad verification failure. Try claiming again.'
         });
       }
     } catch (err: any) {
-      setStatus('ready');
+      setStatus('claimable'); // Allow retry on timeout
       setToast({
         type: 'error',
-        message: 'Reward verified exception. Transaction timed out.'
+        message: 'Reward verified exception. Transaction timed out. Try claiming again.'
       });
     }
   };
@@ -241,27 +329,33 @@ export default function RewardButton() {
     switch (status) {
       case 'ready':
         return {
-          bg: 'bg-gradient-to-r from-amber-550 via-emerald-555 to-teal-550 border-amber-400 hover:brightness-110 active:scale-98 text-slate-950 font-black shadow-[0_4px_20px_rgba(16,185,129,0.3)]',
-          label: `Watch Ad & Earn ${REWARD_VALUE} Coins`,
-          icon: <Play className="w-5 h-5 fill-current animate-pulse" />
+          bg: 'bg-emerald-500 hover:bg-emerald-400 border-emerald-300 text-white font-black hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 cursor-pointer shadow-[0_0_20px_rgba(16,185,129,0.55)] hover:shadow-[0_0_30px_rgba(52,211,153,0.85)] tracking-wider',
+          label: `🎁 WATCH AD • GET ${REWARD_VALUE} COINS`,
+          icon: <Play className="w-6 h-6 text-white fill-white animate-pulse shrink-0" />
         };
       case 'loading':
         return {
-          bg: 'bg-slate-850 border-slate-750 text-slate-400 cursor-not-allowed',
-          label: `Ad Loading... ${loadSecondsLeft}s`,
-          icon: <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
+          bg: 'bg-slate-800 border-slate-750 text-slate-500 cursor-not-allowed opacity-[0.85]',
+          label: `⏳ VERIFYING... ${loadSecondsLeft}s`,
+          icon: <Loader2 className="w-5 h-5 animate-spin text-emerald-400 shrink-0" />
+        };
+      case 'claimable':
+        return {
+          bg: 'bg-slate-900 border-slate-800 text-slate-500 cursor-not-allowed opacity-[0.70]',
+          label: `⏳ VERIFICATION COMPLETE`,
+          icon: <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
         };
       case 'rewarded':
         return {
-          bg: 'bg-emerald-900 border-emerald-500 text-emerald-300 font-extrabold cursor-default shadow-[0_0_25px_rgba(16,185,129,0.55)]',
-          label: `+${REWARD_VALUE} Coins Added!`,
-          icon: <CheckCircle2 className="w-5 h-5 text-emerald-300" />
+          bg: 'bg-emerald-950 border-emerald-500 text-emerald-300 font-extrabold cursor-default shadow-[0_0_25px_rgba(16,185,129,0.55)]',
+          label: `🎉 +10 COINS ADDED`,
+          icon: <CheckCircle2 className="w-5 h-5 text-emerald-300 shrink-0" />
         };
       case 'cooldown':
         return {
           bg: 'bg-slate-900/90 border-slate-800 text-slate-500 cursor-not-allowed',
-          label: `Next Ad In ${cooldownSecondsLeft}s`,
-          icon: <Clock className="w-5 h-5 text-amber-500 animate-[spin_10s_linear_infinite]" />
+          label: `⏱ NEXT AD AVAILABLE IN ${cooldownSecondsLeft}s`,
+          icon: <Clock className="w-5 h-5 text-amber-500 animate-[spin_10s_linear_infinite] shrink-0" />
         };
     }
   };
@@ -352,13 +446,13 @@ export default function RewardButton() {
           <div className="w-full max-w-sm">
             <div className="flex justify-between text-[10px] text-slate-500 font-black mb-1.5 uppercase">
               <span>Establishing Smartlink Connection</span>
-              <span>{Math.round(((15 - loadSecondsLeft) / 15) * 100)}% Verified</span>
+              <span>{Math.round(((10 - loadSecondsLeft) / 10) * 100)}% Verified</span>
             </div>
             {/* Linear Progress Bar */}
             <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden border border-slate-800 p-[1px]">
               <motion.div 
                 className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-green-500 rounded-full"
-                animate={{ width: `${((15 - loadSecondsLeft) / 15) * 100}%` }}
+                animate={{ width: `${((10 - loadSecondsLeft) / 10) * 100}%` }}
                 transition={{ duration: 0.35, ease: 'linear' }}
               />
             </div>
@@ -370,7 +464,7 @@ export default function RewardButton() {
       )}
 
       {/* Interactive Main Button State trigger */}
-      <div className="relative">
+      <div className="relative flex flex-col gap-3">
         <button
           id="instant_reward_ad_btn"
           onClick={handleLaunchAdStream}
@@ -379,6 +473,37 @@ export default function RewardButton() {
         >
           {currentUI.icon}
           <span>{currentUI.label}</span>
+        </button>
+
+        {/* Claim button displayed permanently, activated only when status is claimable */}
+        <button
+          id="claim_rewards_ad_btn"
+          disabled={status !== 'claimable'}
+          onClick={claimCoinsRewardTransaction}
+          className={`w-full py-4 px-6 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all border outline-none duration-300 ${
+            status === 'claimable'
+              ? 'bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 border-amber-300 shadow-[0_0_25px_rgba(245,158,11,0.65)] hover:shadow-[0_0_35px_rgba(251,191,36,0.95)] hover:scale-[1.02] active:scale-[0.98] cursor-pointer animate-pulse'
+              : status === 'rewarded'
+                ? 'bg-emerald-950/40 border-emerald-500/20 text-emerald-400 cursor-not-allowed opacity-80'
+                : 'bg-slate-900/60 border-slate-800 text-slate-600 cursor-not-allowed select-none'
+          }`}
+        >
+          {status === 'claimable' ? (
+            <>
+              <Sparkles className="w-6 h-6 text-slate-950 fill-slate-950 animate-spin shrink-0" />
+              <span>✅ CLAIM 10 COINS</span>
+            </>
+          ) : status === 'rewarded' ? (
+            <>
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              <span>🎉 +10 COINS CLAIMED!</span>
+            </>
+          ) : (
+            <>
+              <Clock className="w-5 h-5 text-slate-600 shrink-0" />
+              <span>🔒 CLAIM 10 COINS (LOCKED)</span>
+            </>
+          )}
         </button>
 
         {/* Cooldown Percentage progress bar overlay */}
