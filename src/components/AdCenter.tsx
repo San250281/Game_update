@@ -369,63 +369,7 @@ export default function AdCenter() {
         <RewardButton />
       </div>
 
-      {/* Campaign offer grids */}
-      <div className="mt-4 border-t border-slate-800/80 pt-5">
-        <h4 className="text-xs font-black text-slate-400 mb-3.5 uppercase tracking-wider flex items-center gap-1.5">
-          <Video className="w-4 h-4 text-emerald-400" /> Additional Sponsor Campaigns
-        </h4>
-      </div>
-      <div className="flex flex-col gap-3.5">
-        {DEFAULT_ADS.map((offer) => {
-          const isCooldown = (cooldownTimers[offer.id] || 0) > 0;
-          const coolTime = cooldownTimers[offer.id] || 0;
 
-          return (
-            <div
-              key={offer.id}
-              className={`p-4 border rounded-2xl flex justify-between items-center transition-all ${
-                isCooldown
-                  ? 'bg-slate-900/40 border-slate-800/60 opacity-70'
-                  : 'bg-slate-900/80 border-slate-800 hover:border-emerald-500/30'
-              }`}
-            >
-              <div className="min-w-0 pr-3">
-                <span className="text-[9px] bg-emerald-500/15 text-emerald-400 font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
-                  {offer.type === 'rewarded' ? 'Rewarded Video' : 'Survey Booster'}
-                </span>
-                <h3 className="text-xs font-bold text-white mt-2 truncate">{offer.title}</h3>
-                <p className="text-[10px] text-gray-400 flex items-center gap-1.5 mt-1.5">
-                  <Clock className="w-3.5 h-3.5 text-gray-500" />
-                  Cooldown: {offer.cooldownSeconds}s after claim
-                </p>
-              </div>
-
-              <div className="text-right shrink-0 flex flex-col items-end gap-2">
-                <span className="text-sm font-black text-yellow-400 font-mono flex items-center gap-0.5">
-                  +{offer.rewardValue}
-                  <span className="text-[10px] text-gray-400 font-bold">COINS</span>
-                </span>
-
-                {isCooldown ? (
-                  <div className="px-3 py-1.5 bg-slate-800 text-[10px] text-slate-400 font-bold rounded-lg flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-slate-500 animate-spin" />
-                    {coolTime}s left
-                  </div>
-                ) : (
-                  <button
-                    id={`launch_ad_btn_${offer.id}`}
-                    onClick={() => handleLaunchAd(offer)}
-                    className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:scale-[1.02] cursor-pointer text-slate-950 font-black text-[10px] uppercase rounded-lg tracking-wider flex items-center gap-1 shadow transition-transform"
-                  >
-                    <Play className="w-3 h-3 fill-current" />
-                    Watch
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
 
       {/* Visual reward claim confirmation toast */}
       <AnimatePresence>
