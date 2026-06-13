@@ -546,6 +546,20 @@ export default function RewardButton() {
           )}
         </button>
 
+        {status === 'claimable' && (
+          <button
+            onClick={() => {
+              localStorage.removeItem('ad_verification_start');
+              localStorage.removeItem('ad_verification_status');
+              setStatus('ready');
+              setToast(null);
+            }}
+            className="text-[11px] text-slate-400 hover:text-white underline transition-colors self-center mt-1 cursor-pointer font-bold"
+          >
+            Reset state & watch another ad
+          </button>
+        )}
+
         {/* Cooldown Percentage progress bar overlay */}
         {status === 'cooldown' && (
           <div className="absolute bottom-0 inset-x-4 h-1 rounded-full overflow-hidden z-10 bg-slate-950/65">

@@ -15,6 +15,7 @@ service cloud.firestore {
     }
 
     function isOwner(uid) {
+
       return isSignedIn() && request.auth.uid == uid;
     }
 
@@ -42,32 +43,32 @@ service cloud.firestore {
     // Entites Schema Validations
     // ----------------------------------------------------
     function isValidUser(data) {
-      return (!('uid' in data) || data.uid == null || (data.uid is string && data.uid.size() <= 128))
-        && (!('name' in data) || data.name == null || (data.name is string && data.name.size() <= 256))
+      return (!('uid' in data) || data.uid == null || (data.uid is string && data.uid.size() <= 256))
+        && (!('name' in data) || data.name == null || (data.name is string && data.name.size() <= 512))
         && (!('coins' in data) || data.coins == null || (data.coins >= 0))
         && (!('email' in data) || data.email == null || (data.email is string && data.email.size() <= 256))
-        && (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 5000))
-        && (!('provider' in data) || data.provider == null || (data.provider is string && data.provider.size() <= 100))
-        && (!('createdAt' in data) || data.createdAt == null || (data.createdAt is string && data.createdAt.size() <= 50))
-        && (!('referralCode' in data) || data.referralCode == null || (data.referralCode is string && data.referralCode.size() <= 100))
+        && (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 10000))
+        && (!('provider' in data) || data.provider == null || (data.provider is string && data.provider.size() <= 256))
+        && (!('createdAt' in data) || data.createdAt == null || (data.createdAt is string && data.createdAt.size() <= 100))
+        && (!('referralCode' in data) || data.referralCode == null || (data.referralCode is string && data.referralCode.size() <= 256))
         && (!('isActive' in data) || data.isActive == null || data.isActive is bool)
-        && (!('lastLogin' in data) || data.lastLogin == null || (data.lastLogin is string && data.lastLogin.size() <= 100))
-        && (!('lastLoginCoinClaimedDate' in data) || data.lastLoginCoinClaimedDate == null || (data.lastLoginCoinClaimedDate is string && data.lastLoginCoinClaimedDate.size() <= 100))
+        && (!('lastLogin' in data) || data.lastLogin == null || (data.lastLogin is string && data.lastLogin.size() <= 200))
+        && (!('lastLoginCoinClaimedDate' in data) || data.lastLoginCoinClaimedDate == null || (data.lastLoginCoinClaimedDate is string && data.lastLoginCoinClaimedDate.size() <= 200))
         && (!('adsWatchedToday' in data) || data.adsWatchedToday == null || (data.adsWatchedToday >= 0))
-        && (!('lastAdWatchedAt' in data) || data.lastAdWatchedAt == null || (data.lastAdWatchedAt is string && data.lastAdWatchedAt.size() <= 100))
-        && (!('referredBy' in data) || data.referredBy == null || (data.referredBy is string && data.referredBy.size() <= 128))
+        && (!('lastAdWatchedAt' in data) || data.lastAdWatchedAt == null || (data.lastAdWatchedAt is string && data.lastAdWatchedAt.size() <= 200))
+        && (!('referredBy' in data) || data.referredBy == null || (data.referredBy is string && data.referredBy.size() <= 256))
         && (!('isAdmin' in data) || data.isAdmin == null || data.isAdmin is bool);
     }
 
     function isValidTransaction(data) {
-      return (!('transactionId' in data) || data.transactionId == null || (data.transactionId is string && data.transactionId.size() <= 128))
-        && (!('uid' in data) || data.uid == null || (data.uid is string && data.uid.size() <= 128))
+      return (!('transactionId' in data) || data.transactionId == null || (data.transactionId is string && data.transactionId.size() <= 256))
+        && (!('uid' in data) || data.uid == null || (data.uid is string && data.uid.size() <= 256))
         && (!('type' in data) || data.type == null || (data.type == 'credit' || data.type == 'debit' || data.type == 'SPONSOR_AD'))
         && (!('coins' in data) || data.coins == null || (data.coins >= 0))
         && (!('reward' in data) || data.reward == null || (data.reward >= 0))
-        && (!('createdAt' in data) || data.createdAt == null || (data.createdAt is string && data.createdAt.size() <= 100))
-        && (!('timestamp' in data) || data.timestamp == null || data.timestamp is timestamp || (data.timestamp is string && data.timestamp.size() <= 100))
-        && (!('adId' in data) || data.adId == null || (data.adId is string && data.adId.size() <= 128))
+        && (!('createdAt' in data) || data.createdAt == null || (data.createdAt is string && data.createdAt.size() <= 200))
+        && (!('timestamp' in data) || data.timestamp == null || data.timestamp != null)
+        && (!('adId' in data) || data.adId == null || (data.adId is string && data.adId.size() <= 256))
         && (!('source' in data) || data.source == null || (data.source == 'game' || data.source == 'ad' || data.source == 'referral' || data.source == 'bonus' || data.source == 'admin' || data.source == 'withdrawal'));
     }
 

@@ -60,10 +60,10 @@ export const saveAdWatchInDb = async (
       const currentCoins = userData.coins || 0;
       const verifiedNextCoins = currentCoins + AD_REWARD;
 
-      // Add transaction history with Server Timestamp
+      // Add transaction history with Server Timestamp formatted as an ISO String
       transaction.set(txRef, {
         ...txPayload,
-        timestamp: serverTimestamp()
+        timestamp: new Date().toISOString()
       });
 
       // Update User balance, ad counts, and last watch time
