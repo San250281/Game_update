@@ -113,16 +113,31 @@ service cloud.firestore {
                      && ('coins' in incoming())
                      && incoming().coins <= 50 
                      && ('createdAt' in incoming() && incoming().createdAt is string && incoming().createdAt.size() <= 50);
-      allow update: if (isOwner(uid) || isAdmin()) && isValidUser(incoming())
+      allow update: if ((isOwner(uid) || isAdmin()) && isValidUser(incoming())
                      && (
                        isAdmin() ||
                        incoming().diff(existing()).affectedKeys().hasOnly(['coins', 'referredBy', 'lastLogin', 'name', 'photoURL', 'isActive', 'lastLoginCoinClaimedDate', 'adsWatchedToday', 'lastAdWatchedAt'])
+                     ))
+                     || (
+                       // Allow referrer's coin balance incrementing by exactly 500 (referral reward)
+                       isSignedIn()
+                       && incoming().diff(existing()).affectedKeys().hasOnly(['coins'])
+                       && (incoming().coins == existing().coins + 500)
                      );
     }
 
     match /transactions/{transactionId} {
       allow read: if isSignedIn() && (resource == null || resource.data.uid == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && (incoming().uid == request.auth.uid || isAdmin()) 
+      allow create: if isSignedIn() && (
+                      incoming().uid == request.auth.uid 
+                      || isAdmin()
+                      || (
+                        // Allow creation of referral bonus credits for reward partners
+                        incoming().source == 'referral'
+                        && incoming().type == 'credit'
+                        && incoming().coins == 500
+                      )
+                    ) 
                     && isValidTransaction(incoming()) 
                     && ('transactionId' in incoming()) 
                     && ('uid' in incoming()) 

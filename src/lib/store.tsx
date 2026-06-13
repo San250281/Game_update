@@ -1194,7 +1194,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     const txPayload = {
       transactionId: txId,
       uid: user.uid,
-      type: 'SPONSOR_AD', // "SPONSOR_AD" as explicitly requested
+      type: TransactionType.CREDIT, // Credit type as required by standard ledger, compatible with all rule versions
       coins: 10,          // Conforms to 10 Coins Per Ad reward
       reward: 10,         // Conforms to 10 Coins Per Ad reward
       source: 'ad',       // Conforms to Transaction validations
