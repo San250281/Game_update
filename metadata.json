@@ -1,6 +1,6 @@
 {
-  "name": "Reward Gaming Platform",
-  "description": "Interactive reward-based gaming platform MVP featuring direct wallet ledgers, daily claim rewards, tactile HTML5 mini-games, referral invites, mock video monetization ads, and secure admin ban indicators.",
+  "name": "REWARDYN",
+  "description": "An interactive Play & Earn gaming arcade platform with a dual-profile coin-based guest/user economy, including board games like Ludo and Chess, plus classic arcade games.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

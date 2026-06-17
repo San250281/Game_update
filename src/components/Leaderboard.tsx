@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { useRewardEngine } from '../lib/store';
 import { UserProfile } from '../types';
+import UserAvatar from './UserAvatar';
 import { Trophy, Medal, Search, Flame, Coins, Sparkles, Filter } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -138,12 +139,11 @@ export default function Leaderboard() {
                   </div>
 
                   {/* Profile Avatar */}
-                  <img
-                    referrerPolicy="no-referrer"
+                  <UserAvatar
                     src={profile.photoURL}
-                    alt={profile.name}
-                    className={`w-9.5 h-9.5 rounded-xl border object-cover shrink-0 bg-slate-950 ${
-                      isSelf ? 'border-yellow-400' : 'border-slate-800'
+                    name={profile.name}
+                    className={`w-9.5 h-9.5 rounded-xl border object-cover shrink-0 ${
+                      isSelf ? 'border-yellow-400 bg-slate-900' : 'border-slate-800 bg-slate-950'
                     }`}
                   />
 

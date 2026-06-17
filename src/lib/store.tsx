@@ -90,6 +90,7 @@ export interface RewardEngineState {
   loginAsGuest: () => Promise<UserProfile>;
   loginWithGoogle: (name?: string, email?: string, photoURL?: string, forceSimulate?: boolean) => Promise<UserProfile>;
   logout: () => Promise<void>;
+  switchUser: (targetUid: string) => Promise<UserProfile>;
   
   // Wallet & Transactions
   creditCoins: (amount: number, source: TransactionSource, customId?: string) => Promise<void>;
@@ -239,7 +240,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
               email: cleanEmail,
               photoURL: firebaseUser.photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${firebaseUser.uid}`,
               provider: firebaseUser.isAnonymous ? ProviderType.GUEST : ProviderType.GOOGLE,
-              coins: 20,
+              coins: firebaseUser.isAnonymous ? 500 : 20,
               referralCode: refCode,
               createdAt: new Date().toISOString(),
               lastLogin: new Date().toISOString(),
@@ -555,7 +556,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
         email: `${gId}@rewardgaming.dev`,
         photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${gId}`,
         provider: ProviderType.GUEST,
-        coins: 0,
+        coins: 500,
         referralCode: generateReferralCode(),
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString(),
@@ -563,6 +564,25 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       };
       await registerUserRecord(profile, allUsers);
       return profile;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const switchUser = async (targetUid: string) => {
+    setLoading(true);
+    try {
+      const target = allUsers.find(u => u.uid === targetUid);
+      if (target) {
+        if (!target.isActive) {
+          throw new Error('This user account is banned.');
+        }
+        setUser(target);
+        localStorage.setItem('rg_user_session', JSON.stringify(target));
+        return target;
+      } else {
+        throw new Error('User profile not found.');
+      }
     } finally {
       setLoading(false);
     }
@@ -1375,6 +1395,7 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       loginAsGuest,
       loginWithGoogle,
       logout,
+      switchUser,
       
       creditCoins,
       debitCoins,

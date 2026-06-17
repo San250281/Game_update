@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { useRewardEngine } from '../lib/store';
 import { UserProfile } from '../types';
+import UserAvatar from './UserAvatar';
 import { 
   Shield, Users, TrendingUp, AlertTriangle, Coins, RefreshCw, 
   Search, ShieldAlert, ArrowUpRight, ArrowDownRight, UserX, UserCheck, Trash
@@ -291,11 +292,10 @@ export default function AdminPanel() {
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <img
-                          referrerPolicy="no-referrer"
+                        <UserAvatar
                           src={usr.photoURL}
-                          alt={usr.name}
-                          className="w-9 h-9 rounded-xl border border-slate-200 object-cover shrink-0 bg-slate-50"
+                          name={usr.name}
+                          className="w-9 h-9 rounded-xl border border-slate-200"
                         />
                         <div className="min-w-0">
                           <h4 className="text-xs font-bold text-slate-850 leading-tight flex items-center gap-1.5">
@@ -337,13 +337,12 @@ export default function AdminPanel() {
               {selectedUser ? (
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 relative">
                   <div className="flex flex-col items-center text-center border-b border-slate-200 pb-4 mb-4">
-                    <img
-                      referrerPolicy="no-referrer"
+                    <UserAvatar
                       src={selectedUser.photoURL}
-                      alt={selectedUser.name}
-                      className="w-14 h-14 rounded-2xl border-2 border-slate-200 object-cover bg-white mb-2.5"
+                      name={selectedUser.name}
+                      className="w-14 h-14 rounded-2xl border-2 border-slate-200"
                     />
-                    <h3 className="text-xs font-black text-slate-900">{selectedUser.name}</h3>
+                    <h3 className="text-xs font-black text-rose-950 mt-2">{selectedUser.name}</h3>
                     <p className="text-[10px] text-slate-500 font-mono mt-1 pr-1 truncate max-w-full">
                       UID: {selectedUser.uid}
                     </p>
