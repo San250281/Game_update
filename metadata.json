@@ -1,6 +1,6 @@
 {
-  "name": "REWARDYN",
-  "description": "An interactive Play & Earn gaming arcade platform with a dual-profile coin-based guest/user economy, including board games like Ludo and Chess, plus classic arcade games.",
+  "name": "RewardArena",
+  "description": "Play Games. Earn Coins. Unlock Rewards. Premium web gaming rewards platform featuring arcade games, surveys, affiliate offers, advertising campaigns, and gift card redemptions.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
