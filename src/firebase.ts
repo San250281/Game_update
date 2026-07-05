@@ -26,7 +26,9 @@ let authInstance: any = null;
 if (isFirebaseLive && firebaseConfig) {
   try {
     appInstance = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    dbInstance = getFirestore(appInstance, firebaseConfig.firestoreDatabaseId);
+    dbInstance = firebaseConfig.firestoreDatabaseId
+      ? getFirestore(appInstance, firebaseConfig.firestoreDatabaseId)
+      : getFirestore(appInstance);
     authInstance = getAuth(appInstance);
   } catch (error) {
     console.warn('Failed to initialize live Firebase, sliding into Sandbox Mode:', error);

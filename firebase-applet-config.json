@@ -1,10 +1,9 @@
 {
-  "projectId": "gen-lang-client-0545156599",
-  "appId": "1:563537221101:web:f89998e0c9f9a17961c3e4",
-  "apiKey": "AIzaSyAC2Azy5GoMb-z5FK5ZI-YiWlPZHZwEraQ",
-  "authDomain": "gen-lang-client-0545156599.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-a2f79c36-c484-4cef-b324-8408ab24d18d",
-  "storageBucket": "gen-lang-client-0545156599.firebasestorage.app",
-  "messagingSenderId": "563537221101",
+  "projectId": "reward-gaming-platform",
+  "appId": "1:394663354605:web:6a1c66f73fa63109cdace4",
+  "apiKey": "AIzaSyABLqZhJSsqp7CKsYA93ng5ktb4wz52Fcs",
+  "authDomain": "reward-gaming-platform.firebaseapp.com",
+  "storageBucket": "reward-gaming-platform.firebasestorage.app",
+  "messagingSenderId": "394663354605",
   "measurementId": ""
 }
