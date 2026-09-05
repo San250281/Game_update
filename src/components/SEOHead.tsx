@@ -13,7 +13,7 @@ interface SEOHeadProps {
   isGuest?: boolean;
 }
 
-const BASE_URL = 'https://rewardarena.vercel.app';
+const BASE_URL = typeof window !== 'undefined' && window.location.origin ? window.location.origin : 'https://www.rewardyn.in';
 const BRAND_NAME = 'REWARDYN';
 
 export default function SEOHead({
@@ -125,7 +125,9 @@ export default function SEOHead({
 
     // 6. Update URL Hash without triggering reload
     if (typeof window !== 'undefined' && hashTarget) {
-      if (window.location.hash !== hashTarget) {
+      const currentHash = (window.location.hash || '').toLowerCase();
+      const isLobbyEquivalent = hashTarget === '#games' && (currentHash === '#games' || currentHash === '#lobby' || currentHash === '#play' || currentHash === '#faq');
+      if (!isLobbyEquivalent && currentHash !== hashTarget.toLowerCase()) {
         window.history.replaceState(null, '', hashTarget);
       }
     }

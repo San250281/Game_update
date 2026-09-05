@@ -34,6 +34,110 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
+// Complete List of All 45+ Games (Originals + All Requested Categories)
+const ALL_GAMES = [
+  // Original 5 Games
+  { id: GameType.SPIN_WHEEL, title: 'Lucky Wheel Spin', icon: '🎡', category: 'arcade', desc: 'Spin the physical segment wheel. Max jackpot is +200 coins. Profit probability optimized!', cost: 20, maxReward: 200, isNew: false, isMembershipOnly: false },
+  { id: GameType.SCRATCH_CARD, title: 'Golden Scratch Card', icon: '✉️', category: 'arcade', desc: 'Rub off metallic coatings interactively on touch paths to claim random coin bags.', cost: 15, maxReward: 40, isNew: false, isMembershipOnly: false },
+  { id: GameType.QUIZ, title: 'Knowledge Arena Quiz', icon: '🧠', category: 'action', desc: 'Sharpen your engineering background! Clear up to 10 question rounds to earn tiered limits.', cost: 30, maxReward: 60, isNew: false, isMembershipOnly: false },
+  { id: GameType.TAP_CHALLENGE, title: 'Hyper Tap Velocity', icon: '⚡', category: 'action', desc: 'Test click velocity! Tab as fast as possible in 10s to win highest payouts.', cost: 25, maxReward: 80, isNew: false, isMembershipOnly: false },
+  { id: GameType.PUZZLE, title: '8-Piece Slide Puzzle', icon: '🧩', category: 'action', desc: 'Sliding block intelligence challenge. Puzzle numbers sequentially under 1 minute!', cost: 50, maxReward: 200, isNew: false, isMembershipOnly: false },
+  
+  // Board Games requested (Ludo, Chess, TicTacToe) - Chess & Ludo are exclusive VIP Games
+  { id: GameType.LUDO, title: 'Royal Ludo', icon: '🎲', category: 'board', desc: 'Roll dice, advance tokens, reach the center safe home coordinates first!', cost: 25, maxReward: 75, isNew: false, isMembershipOnly: true },
+  { id: GameType.CHESS, title: 'Grandmaster Chess', icon: '♟️', category: 'board', desc: 'Play actual board rules with captures, select pieces and defeat smart local AI!', cost: 40, maxReward: 120, isNew: false, isMembershipOnly: true },
+  { id: GameType.TIC_TAC_TOE, title: 'Tic-Tac-Toe Grid', icon: '❌', category: 'board', desc: 'Connect 3-in-a-row in a classic slate grid. Defeat the computer block tactics.', cost: 10, maxReward: 25, isNew: false, isMembershipOnly: false },
+  
+  // Arcade / Casual Games (Snake, Tetris, Pong, Flappy Bird, Memory Match, 2048, Minesweeper, Word Guesser)
+  { id: GameType.SNAKE, title: 'Classic Snake', icon: '🐍', category: 'arcade', desc: 'Guide pixel snakes to eat rising cherries 🍒. Grow longer and don\'t smash borders!', cost: 15, maxReward: 45, isNew: false, isMembershipOnly: false },
+  { id: GameType.TETRIS, title: 'Retro Block Fall', icon: '🧱', category: 'arcade', desc: 'Align descending geometric cubes to clear line rows and score jackpot rewards.', cost: 20, maxReward: 50, isNew: false, isMembershipOnly: false },
+  { id: GameType.PONG, title: 'Aesthetic Pong', icon: '🏓', category: 'arcade', desc: 'Realtime 2D bouncing ball pong. Control paddle with mouse/keys and outlive AI.', cost: 15, maxReward: 35, isNew: false, isMembershipOnly: false },
+  { id: GameType.FLAPPY_BIRD, title: 'Flappy Flyer', icon: '🐦', category: 'arcade', desc: 'Help the cute flybird flap through hazardous gaps recursively. 60fps graphics!', cost: 15, maxReward: 40, isNew: false, isMembershipOnly: false },
+  { id: GameType.MEMORY_MATCH, title: 'Card Memory Pairs', icon: '🃏', category: 'arcade', desc: 'Flip pairs of culinary tiles. Match all symbols quickly under countdown limits.', cost: 10, maxReward: 25, isNew: false, isMembershipOnly: false },
+  { id: GameType.GAME_2048, title: 'Merge 2048 Blocks', icon: '🔢', category: 'arcade', desc: 'Slide identical numbered blocks upwards to aggregate 2048 score targets.', cost: 25, maxReward: 75, isNew: false, isMembershipOnly: false },
+  { id: GameType.MINESWEEPER, title: 'Nuclear Minesweeper', icon: '💣', category: 'arcade', desc: 'Locate radioactive elements! Flag danger blocks, reveal entire safe grids.', cost: 15, maxReward: 50, isNew: false, isMembershipOnly: false },
+  { id: GameType.WORD_GUESSER, title: 'Wordle Guess Solver', icon: '🔤', category: 'arcade', desc: 'Classic 5-letter word solver. Fill green, yellow and gray status tiles.', cost: 20, maxReward: 40, isNew: false, isMembershipOnly: false },
+  
+  // Action / Skill reflexes (Space Shooter is exclusive VIP Game)
+  { id: GameType.SPACE_SHOOTER, title: 'Galaxy Fighter', icon: '🚀', category: 'action', desc: 'Shoot laser rounds at space meteorites to claim deep orbit coin starships.', cost: 20, maxReward: 60, isNew: false, isMembershipOnly: true },
+  { id: GameType.WHACK_A_MOLE, title: 'Whack-a-Mole', icon: '🐹', category: 'action', desc: 'Tap rapid popping moles. Test high reaction rate under time limits!', cost: 15, maxReward: 30, isNew: false, isMembershipOnly: false },
+  { id: GameType.BALLOON_POPPER, title: 'Balloon Popper', icon: '🎈', category: 'action', desc: 'Pop rising hydrogen balloons before they fly. Claim instant multipliers.', cost: 10, maxReward: 20, isNew: false, isMembershipOnly: false },
+  { id: GameType.BRICK_BREAKER, title: 'Brick Crusher', icon: '🔥', category: 'action', desc: 'Bounce balls using responsive paddles to break rows of colorful brick lines.', cost: 20, maxReward: 45, isNew: false, isMembershipOnly: false },
+  { id: GameType.COLOR_MATCHER, title: 'Simon Simon memory', icon: '🟡', category: 'action', desc: 'Observe, memorize and repeat sequential flashing light signal cues.', cost: 15, maxReward: 30, isNew: false, isMembershipOnly: false },
+  { id: GameType.ROCK_PAPER_SESSORS, title: 'R-P-S Duel', icon: '✊', category: 'action', desc: 'Play rock, paper or scissors against our mathematical AI generator.', cost: 10, maxReward: 20, isNew: false, isMembershipOnly: false },
+  { id: GameType.SUDOKU, title: 'Sudoku mini 4x4', icon: '🧩', category: 'action', desc: 'Fill empty slots so numbers 1 to 4 do not overlap inside square lines.', cost: 25, maxReward: 60, isNew: false, isMembershipOnly: false },
+  { id: GameType.COIN_FLIP, title: 'Coin Flipper', icon: '🪙', category: 'action', desc: 'Secure 50/50 heads or tails. Multiply coin reserves effortlessly.', cost: 10, maxReward: 20, isNew: false, isMembershipOnly: false },
+  { id: GameType.DODGE_OBSTACLES, title: 'Highway Car Dodger', icon: '🏎️', category: 'action', desc: 'Steer left or right on highways to dodge oncoming speed blocks.', cost: 15, maxReward: 35, isNew: false, isMembershipOnly: false },
+
+  // REWARD / ARCADE WEBSITES category (Treasure Hunt is exclusive VIP Game)
+  { id: GameType.LUCKY_DRAW, title: 'Jackpot Lucky Draw', icon: '🎟️', category: 'arcade', desc: 'Draw a gold ticket from the reward dispenser. Stand a chance to multiply stakes by 5x!', cost: 15, maxReward: 75, isNew: true, isMembershipOnly: false },
+  { id: GameType.DAILY_CHECKIN, title: 'Checkin Calendar Match', icon: '📅', category: 'arcade', desc: 'Fulfill daily streaks for active claim counts! Match consecutive dates for coin multipliers.', cost: 10, maxReward: 30, isNew: true, isMembershipOnly: false },
+  { id: GameType.COIN_COLLECTOR, title: 'Sky Coin Collector', icon: '⭐', category: 'arcade', desc: 'Coins falling from the cloud! Control your chest and scoop bags of gold before timer runs out!', cost: 15, maxReward: 50, isNew: true, isMembershipOnly: false },
+  { id: GameType.TREASURE_HUNT, title: 'Deep Treasure Hunt', icon: '🏴‍☠️', category: 'arcade', desc: 'Solve island coordinate puzzles! Select grid locations to uncover chests. Watch out for sharks!', cost: 20, maxReward: 80, isNew: true, isMembershipOnly: true },
+
+  // CASUAL GAMES (Match-3 Sweet Crush, Word Search, Crossword Panel)
+  { id: GameType.MATCH_3, title: 'Sweet Match-3 Blast', icon: '🍬', category: 'arcade', desc: 'Swap neighboring sweets. Pop blocks of 3 matching units to level up!', cost: 20, maxReward: 60, isNew: true, isMembershipOnly: false },
+  { id: GameType.WORD_SEARCH, title: 'Word Search Sleuth', icon: '🔍', category: 'board', desc: 'Locate hidden secret words spelled in horizontal or vertical layout panels!', cost: 15, maxReward: 45, isNew: true, isMembershipOnly: false },
+  { id: GameType.CROSSWORD, title: 'Mini Cryptic Crossword', icon: '📝', category: 'board', desc: 'Fill crossword cells using textual clues. Overlap characters correctly to score!', cost: 20, maxReward: 60, isNew: true, isMembershipOnly: false },
+
+  // SKILL GAMES requested (Checkers Board, Connect 4)
+  { id: GameType.CHECKERS, title: 'Checkers Drafts Duel', icon: '🔴', category: 'board', desc: 'Jump over enemy red counters in standard drafts board paths against our local AI!', cost: 25, maxReward: 75, isNew: true, isMembershipOnly: false },
+  { id: GameType.CONNECT_4, title: 'Connect 4 Drops', icon: '🔵', category: 'board', desc: 'Drop blue discs into column grids. Slot 4 of your tokens adjacent to beat the AI!', cost: 20, maxReward: 50, isNew: true, isMembershipOnly: false },
+
+  // QUICK MINI-GAMES reflexes (Reaction Time Test, Click Speed Clicker)
+  { id: GameType.REACTION_TIME, title: 'Reaction Speed Test', icon: '⏱️', category: 'action', desc: 'Click immediately when visual layouts transition into green light values!', cost: 10, maxReward: 30, isNew: true, isMembershipOnly: false },
+  { id: GameType.CLICK_SPEED, title: 'Click Speed Test 10s', icon: '💥', category: 'action', desc: 'Mash click targets! Discover your CPS (Clicks Per Second) to capture gold pools.', cost: 10, maxReward: 30, isNew: true, isMembershipOnly: false },
+
+  // RUNNER GAMES reflexes (Temple Run Style, Subway Surfers Style, Dino Runner, Endless Jump Jumper)
+  { id: GameType.RUNNER_TEMPLE, title: 'Lost Temple runner', icon: '🛕', category: 'action', desc: 'Dodge crumbling pathway obstacles, leap logs, turn corners in high-speed temples.', cost: 20, maxReward: 60, isNew: true, isMembershipOnly: false },
+  { id: GameType.RUNNER_SUBWAY, title: 'Subway Rail Surfer', icon: '🚇', category: 'action', desc: 'Steer between 3-tracks to avoid oncoming metro train cars, gather glowing coins.', cost: 20, maxReward: 60, isNew: true, isMembershipOnly: false },
+  { id: GameType.DINO_RUNNER, title: 'Jumping Chrome Dino', icon: '🦖', category: 'action', desc: 'The offline internet legend! Leap over prickly cacti and score milestones.', cost: 15, maxReward: 45, isNew: true, isMembershipOnly: false },
+  { id: GameType.ENDLESS_JUMP, title: 'Cloud Jump Jumper', icon: '☁️', category: 'action', desc: 'Bounce upwards off celestial platforms endlessly without falling down!', cost: 15, maxReward: 45, isNew: true, isMembershipOnly: false },
+
+  // CARD GAMES (Solitaire, Poker, Blackjack, Rummy are exclusive VIP Games)
+  { id: GameType.SOLITAIRE, title: 'Solitaire Classic Klondike', icon: '🎴', category: 'board', desc: 'Group standard cards by sequential alternating suites to set up card pyramids!', cost: 25, maxReward: 75, isNew: true, isMembershipOnly: true },
+  { id: GameType.POKER, title: '5-Card Draw Poker', icon: '🃏', category: 'board', desc: 'Play-money betting room! Match royal pairs, flushes and straights against AI hands.', cost: 30, maxReward: 90, isNew: true, isMembershipOnly: true },
+  { id: GameType.BLACKJACK, title: 'Vegas Blackjack 21', icon: '🪙', category: 'board', desc: 'Vegas classic! Hit, Stand or Double to reach 21 or defeat the AI dealer hands.', cost: 20, maxReward: 50, isNew: true, isMembershipOnly: true },
+  { id: GameType.RUMMY, title: 'Rummy Deck Melder', icon: '🀄', category: 'board', desc: 'Arrange cards into consecutive runs and of-a-kind sets. Solve your hands first!', cost: 25, maxReward: 75, isNew: true, isMembershipOnly: true },
+  { id: GameType.UNO, title: 'Uno Discard Party', icon: '🌈', category: 'board', desc: 'Discard matching colored/valued cards. Intercept opponent leads with Action Cards!', cost: 20, maxReward: 60, isNew: true, isMembershipOnly: false }
+];
+
+type AppNavTab = 'home' | 'lobby' | 'about' | 'services' | 'blog' | 'contact' | 'wallet' | 'referrals' | 'leaderboard' | 'membership' | 'admin';
+
+function parseUrlHash(): { tab: AppNavTab; gameId: GameType | null } {
+  if (typeof window === 'undefined') return { tab: 'home', gameId: null };
+  const rawHash = window.location.hash || '';
+  const hash = rawHash.toLowerCase();
+
+  if (hash.startsWith('#game=')) {
+    const gameParam = decodeURIComponent(rawHash.replace(/^[#]game=/i, '')).toLowerCase();
+    const matched = ALL_GAMES.find(g => 
+      g.title.toLowerCase().replace(/\s+/g, '-') === gameParam ||
+      g.id.toLowerCase().replace(/\s+/g, '-') === gameParam ||
+      g.id.toLowerCase() === gameParam
+    );
+    if (matched) {
+      return { tab: 'lobby', gameId: matched.id as GameType };
+    }
+    return { tab: 'lobby', gameId: null };
+  }
+
+  if (hash === '#games' || hash === '#faq' || hash === '#lobby' || hash === '#play') {
+    return { tab: 'lobby', gameId: null };
+  }
+  if (hash === '#about') return { tab: 'about', gameId: null };
+  if (hash === '#services') return { tab: 'services', gameId: null };
+  if (hash === '#blog') return { tab: 'blog', gameId: null };
+  if (hash === '#contact') return { tab: 'contact', gameId: null };
+  if (hash === '#wallet') return { tab: 'wallet', gameId: null };
+  if (hash === '#referrals') return { tab: 'referrals', gameId: null };
+  if (hash === '#leaderboard') return { tab: 'leaderboard', gameId: null };
+  if (hash === '#membership') return { tab: 'membership', gameId: null };
+  if (hash === '#admin') return { tab: 'admin', gameId: null };
+
+  return { tab: 'home', gameId: null };
+}
+
 function DashboardLobby() {
   const { 
     user, 
@@ -46,8 +150,8 @@ function DashboardLobby() {
     toggleMembershipStatus
   } = useRewardEngine();
 
-  const [activeTab, setActiveTab] = useState<'home' | 'lobby' | 'about' | 'services' | 'blog' | 'contact' | 'wallet' | 'referrals' | 'leaderboard' | 'membership' | 'admin'>('home');
-  const [activeGame, setActiveGame] = useState<GameType | null>(null);
+  const [activeTab, setActiveTab] = useState<AppNavTab>(() => parseUrlHash().tab);
+  const [activeGame, setActiveGame] = useState<GameType | null>(() => parseUrlHash().gameId);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [membershipPromptGame, setMembershipPromptGame] = useState<any | null>(null);
   
@@ -57,76 +161,18 @@ function DashboardLobby() {
   
   // Profile Switcher lists toggle popup
   const [showProfileSwitcher, setShowProfileSwitcher] = useState(false);
+  const [userRequestedAuth, setUserRequestedAuth] = useState(false);
 
-  if (!user) return <AuthScreen />;
+  // Auto-authenticate guest on direct visit to #games or any page if no active session
+  useEffect(() => {
+    if (!user && !userRequestedAuth) {
+      loginAsGuest().catch((err) => {
+        console.warn('Auto guest login notice:', err);
+      });
+    }
+  }, [user, userRequestedAuth, loginAsGuest]);
 
-  // Complete List of All 45+ Games (Originals + All Requested Categories)
-  const allGames = [
-    // Original 5 Games
-    { id: GameType.SPIN_WHEEL, title: 'Lucky Wheel Spin', icon: '🎡', category: 'arcade', desc: 'Spin the physical segment wheel. Max jackpot is +200 coins. Profit probability optimized!', cost: 20, maxReward: 200, isNew: false, isMembershipOnly: false },
-    { id: GameType.SCRATCH_CARD, title: 'Golden Scratch Card', icon: '✉️', category: 'arcade', desc: 'Rub off metallic coatings interactively on touch paths to claim random coin bags.', cost: 15, maxReward: 40, isNew: false, isMembershipOnly: false },
-    { id: GameType.QUIZ, title: 'Knowledge Arena Quiz', icon: '🧠', category: 'action', desc: 'Sharpen your engineering background! Clear up to 10 question rounds to earn tiered limits.', cost: 30, maxReward: 60, isNew: false, isMembershipOnly: false },
-    { id: GameType.TAP_CHALLENGE, title: 'Hyper Tap Velocity', icon: '⚡', category: 'action', desc: 'Test click velocity! Tab as fast as possible in 10s to win highest payouts.', cost: 25, maxReward: 80, isNew: false, isMembershipOnly: false },
-    { id: GameType.PUZZLE, title: '8-Piece Slide Puzzle', icon: '🧩', category: 'action', desc: 'Sliding block intelligence challenge. Puzzle numbers sequentially under 1 minute!', cost: 50, maxReward: 200, isNew: false, isMembershipOnly: false },
-    
-    // Board Games requested (Ludo, Chess, TicTacToe) - Chess & Ludo are exclusive VIP Games
-    { id: GameType.LUDO, title: 'Royal Ludo', icon: '🎲', category: 'board', desc: 'Roll dice, advance tokens, reach the center safe home coordinates first!', cost: 25, maxReward: 75, isNew: false, isMembershipOnly: true },
-    { id: GameType.CHESS, title: 'Grandmaster Chess', icon: '♟️', category: 'board', desc: 'Play actual board rules with captures, select pieces and defeat smart local AI!', cost: 40, maxReward: 120, isNew: false, isMembershipOnly: true },
-    { id: GameType.TIC_TAC_TOE, title: 'Tic-Tac-Toe Grid', icon: '❌', category: 'board', desc: 'Connect 3-in-a-row in a classic slate grid. Defeat the computer block tactics.', cost: 10, maxReward: 25, isNew: false, isMembershipOnly: false },
-    
-    // Arcade / Casual Games (Snake, Tetris, Pong, Flappy Bird, Memory Match, 2048, Minesweeper, Word Guesser)
-    { id: GameType.SNAKE, title: 'Classic Snake', icon: '🐍', category: 'arcade', desc: 'Guide pixel snakes to eat rising cherries 🍒. Grow longer and don\'t smash borders!', cost: 15, maxReward: 45, isNew: false, isMembershipOnly: false },
-    { id: GameType.TETRIS, title: 'Retro Block Fall', icon: '🧱', category: 'arcade', desc: 'Align descending geometric cubes to clear line rows and score jackpot rewards.', cost: 20, maxReward: 50, isNew: false, isMembershipOnly: false },
-    { id: GameType.PONG, title: 'Aesthetic Pong', icon: '🏓', category: 'arcade', desc: 'Realtime 2D bouncing ball pong. Control paddle with mouse/keys and outlive AI.', cost: 15, maxReward: 35, isNew: false, isMembershipOnly: false },
-    { id: GameType.FLAPPY_BIRD, title: 'Flappy Flyer', icon: '🐦', category: 'arcade', desc: 'Help the cute flybird flap through hazardous gaps recursively. 60fps graphics!', cost: 15, maxReward: 40, isNew: false, isMembershipOnly: false },
-    { id: GameType.MEMORY_MATCH, title: 'Card Memory Pairs', icon: '🃏', category: 'arcade', desc: 'Flip pairs of culinary tiles. Match all symbols quickly under countdown limits.', cost: 10, maxReward: 25, isNew: false, isMembershipOnly: false },
-    { id: GameType.GAME_2048, title: 'Merge 2048 Blocks', icon: '🔢', category: 'arcade', desc: 'Slide identical numbered blocks upwards to aggregate 2048 score targets.', cost: 25, maxReward: 75, isNew: false, isMembershipOnly: false },
-    { id: GameType.MINESWEEPER, title: 'Nuclear Minesweeper', icon: '💣', category: 'arcade', desc: 'Locate radioactive elements! Flag danger blocks, reveal entire safe grids.', cost: 15, maxReward: 50, isNew: false, isMembershipOnly: false },
-    { id: GameType.WORD_GUESSER, title: 'Wordle Guess Solver', icon: '🔤', category: 'arcade', desc: 'Classic 5-letter word solver. Fill green, yellow and gray status tiles.', cost: 20, maxReward: 40, isNew: false, isMembershipOnly: false },
-    
-    // Action / Skill reflexes (Space Shooter is exclusive VIP Game)
-    { id: GameType.SPACE_SHOOTER, title: 'Galaxy Fighter', icon: '🚀', category: 'action', desc: 'Shoot laser rounds at space meteorites to claim deep orbit coin starships.', cost: 20, maxReward: 60, isNew: false, isMembershipOnly: true },
-    { id: GameType.WHACK_A_MOLE, title: 'Whack-a-Mole', icon: '🐹', category: 'action', desc: 'Tap rapid popping moles. Test high reaction rate under time limits!', cost: 15, maxReward: 30, isNew: false, isMembershipOnly: false },
-    { id: GameType.BALLOON_POPPER, title: 'Balloon Popper', icon: '🎈', category: 'action', desc: 'Pop rising hydrogen balloons before they fly. Claim instant multipliers.', cost: 10, maxReward: 20, isNew: false, isMembershipOnly: false },
-    { id: GameType.BRICK_BREAKER, title: 'Brick Crusher', icon: '🔥', category: 'action', desc: 'Bounce balls using responsive paddles to break rows of colorful brick lines.', cost: 20, maxReward: 45, isNew: false, isMembershipOnly: false },
-    { id: GameType.COLOR_MATCHER, title: 'Simon Simon memory', icon: '🟡', category: 'action', desc: 'Observe, memorize and repeat sequential flashing light signal cues.', cost: 15, maxReward: 30, isNew: false, isMembershipOnly: false },
-    { id: GameType.ROCK_PAPER_SESSORS, title: 'R-P-S Duel', icon: '✊', category: 'action', desc: 'Play rock, paper or scissors against our mathematical AI generator.', cost: 10, maxReward: 20, isNew: false, isMembershipOnly: false },
-    { id: GameType.SUDOKU, title: 'Sudoku mini 4x4', icon: '🧩', category: 'action', desc: 'Fill empty slots so numbers 1 to 4 do not overlap inside square lines.', cost: 25, maxReward: 60, isNew: false, isMembershipOnly: false },
-    { id: GameType.COIN_FLIP, title: 'Coin Flipper', icon: '🪙', category: 'action', desc: 'Secure 50/50 heads or tails. Multiply coin reserves effortlessly.', cost: 10, maxReward: 20, isNew: false, isMembershipOnly: false },
-    { id: GameType.DODGE_OBSTACLES, title: 'Highway Car Dodger', icon: '🏎️', category: 'action', desc: 'Steer left or right on highways to dodge oncoming speed blocks.', cost: 15, maxReward: 35, isNew: false, isMembershipOnly: false },
-
-    // REWARD / ARCADE WEBSITES category (Treasure Hunt is exclusive VIP Game)
-    { id: GameType.LUCKY_DRAW, title: 'Jackpot Lucky Draw', icon: '🎟️', category: 'arcade', desc: 'Draw a gold ticket from the reward dispenser. Stand a chance to multiply stakes by 5x!', cost: 15, maxReward: 75, isNew: true, isMembershipOnly: false },
-    { id: GameType.DAILY_CHECKIN, title: 'Checkin Calendar Match', icon: '📅', category: 'arcade', desc: 'Fulfill daily streaks for active claim counts! Match consecutive dates for coin multipliers.', cost: 10, maxReward: 30, isNew: true, isMembershipOnly: false },
-    { id: GameType.COIN_COLLECTOR, title: 'Sky Coin Collector', icon: '⭐', category: 'arcade', desc: 'Coins falling from the cloud! Control your chest and scoop bags of gold before timer runs out!', cost: 15, maxReward: 50, isNew: true, isMembershipOnly: false },
-    { id: GameType.TREASURE_HUNT, title: 'Deep Treasure Hunt', icon: '🏴‍☠️', category: 'arcade', desc: 'Solve island coordinate puzzles! Select grid locations to uncover chests. Watch out for sharks!', cost: 20, maxReward: 80, isNew: true, isMembershipOnly: true },
-
-    // CASUAL GAMES (Match-3 Sweet Crush, Word Search, Crossword Panel)
-    { id: GameType.MATCH_3, title: 'Sweet Match-3 Blast', icon: '🍬', category: 'arcade', desc: 'Swap neighboring sweets. Pop blocks of 3 matching units to level up!', cost: 20, maxReward: 60, isNew: true, isMembershipOnly: false },
-    { id: GameType.WORD_SEARCH, title: 'Word Search Sleuth', icon: '🔍', category: 'board', desc: 'Locate hidden secret words spelled in horizontal or vertical layout panels!', cost: 15, maxReward: 45, isNew: true, isMembershipOnly: false },
-    { id: GameType.CROSSWORD, title: 'Mini Cryptic Crossword', icon: '📝', category: 'board', desc: 'Fill crossword cells using textual clues. Overlap characters correctly to score!', cost: 20, maxReward: 60, isNew: true, isMembershipOnly: false },
-
-    // SKILL GAMES requested (Checkers Board, Connect 4)
-    { id: GameType.CHECKERS, title: 'Checkers Drafts Duel', icon: '🔴', category: 'board', desc: 'Jump over enemy red counters in standard drafts board paths against our local AI!', cost: 25, maxReward: 75, isNew: true, isMembershipOnly: false },
-    { id: GameType.CONNECT_4, title: 'Connect 4 Drops', icon: '🔵', category: 'board', desc: 'Drop blue discs into column grids. Slot 4 of your tokens adjacent to beat the AI!', cost: 20, maxReward: 50, isNew: true, isMembershipOnly: false },
-
-    // QUICK MINI-GAMES reflexes (Reaction Time Test, Click Speed Clicker)
-    { id: GameType.REACTION_TIME, title: 'Reaction Speed Test', icon: '⏱️', category: 'action', desc: 'Click immediately when visual layouts transition into green light values!', cost: 10, maxReward: 30, isNew: true, isMembershipOnly: false },
-    { id: GameType.CLICK_SPEED, title: 'Click Speed Test 10s', icon: '💥', category: 'action', desc: 'Mash click targets! Discover your CPS (Clicks Per Second) to capture gold pools.', cost: 10, maxReward: 30, isNew: true, isMembershipOnly: false },
-
-    // RUNNER GAMES reflexes (Temple Run Style, Subway Surfers Style, Dino Runner, Endless Jump Jumper)
-    { id: GameType.RUNNER_TEMPLE, title: 'Lost Temple runner', icon: '🛕', category: 'action', desc: 'Dodge crumbling pathway obstacles, leap logs, turn corners in high-speed temples.', cost: 20, maxReward: 60, isNew: true, isMembershipOnly: false },
-    { id: GameType.RUNNER_SUBWAY, title: 'Subway Rail Surfer', icon: '🚇', category: 'action', desc: 'Steer between 3-tracks to avoid oncoming metro train cars, gather glowing coins.', cost: 20, maxReward: 60, isNew: true, isMembershipOnly: false },
-    { id: GameType.DINO_RUNNER, title: 'Jumping Chrome Dino', icon: '🦖', category: 'action', desc: 'The offline internet legend! Leap over prickly cacti and score milestones.', cost: 15, maxReward: 45, isNew: true, isMembershipOnly: false },
-    { id: GameType.ENDLESS_JUMP, title: 'Cloud Jump Jumper', icon: '☁️', category: 'action', desc: 'Bounce upwards off celestial platforms endlessly without falling down!', cost: 15, maxReward: 45, isNew: true, isMembershipOnly: false },
-
-    // CARD GAMES (Solitaire, Poker, Blackjack, Rummy are exclusive VIP Games)
-    { id: GameType.SOLITAIRE, title: 'Solitaire Classic Klondike', icon: '🎴', category: 'board', desc: 'Group standard cards by sequential alternating suites to set up card pyramids!', cost: 25, maxReward: 75, isNew: true, isMembershipOnly: true },
-    { id: GameType.POKER, title: '5-Card Draw Poker', icon: '🃏', category: 'board', desc: 'Play-money betting room! Match royal pairs, flushes and straights against AI hands.', cost: 30, maxReward: 90, isNew: true, isMembershipOnly: true },
-    { id: GameType.BLACKJACK, title: 'Vegas Blackjack 21', icon: '🪙', category: 'board', desc: 'Vegas classic! Hit, Stand or Double to reach 21 or defeat the AI dealer hands.', cost: 20, maxReward: 50, isNew: true, isMembershipOnly: true },
-    { id: GameType.RUMMY, title: 'Rummy Deck Melder', icon: '🀄', category: 'board', desc: 'Arrange cards into consecutive runs and of-a-kind sets. Solve your hands first!', cost: 25, maxReward: 75, isNew: true, isMembershipOnly: true },
-    { id: GameType.UNO, title: 'Uno Discard Party', icon: '🌈', category: 'board', desc: 'Discard matching colored/valued cards. Intercept opponent leads with Action Cards!', cost: 20, maxReward: 60, isNew: true, isMembershipOnly: false }
-  ];
+  const allGames = ALL_GAMES;
 
   const websiteTabs = [
     { id: 'home', label: 'Home', icon: Home, color: 'text-blue-500' },
@@ -144,16 +190,41 @@ function DashboardLobby() {
     { id: 'referrals', label: 'Invite Friends', icon: Users, color: 'text-purple-500' },
   ];
 
-  if (user.isAdmin) {
+  if (user?.isAdmin) {
     arcadeTabs.push({ id: 'admin', label: 'Admin Hub', icon: Shield, color: 'text-rose-500' });
   }
 
   const allNavigationTabs = [...websiteTabs, ...arcadeTabs];
 
+  const handleLogout = () => {
+    setUserRequestedAuth(true);
+    logout();
+  };
+
   const handleTabSelect = (tabId: any) => {
     setActiveTab(tabId);
     setActiveGame(null);
     setMobileMenuOpen(false);
+    if (typeof window !== 'undefined') {
+      const targetHash = tabId === 'lobby' ? '#games' : `#${tabId}`;
+      if (window.location.hash !== targetHash) {
+        window.history.pushState(null, '', targetHash);
+      }
+    }
+  };
+
+  const handleGameSelect = (gid: GameType) => {
+    const targetGame = ALL_GAMES.find((g) => g.id === gid);
+    if (targetGame?.isMembershipOnly && !isMember) {
+      setMembershipPromptGame(targetGame);
+    } else {
+      setActiveTab('lobby');
+      setActiveGame(gid);
+      if (targetGame && typeof window !== 'undefined') {
+        const gameSlug = targetGame.title.toLowerCase().replace(/\s+/g, '-');
+        window.history.pushState(null, '', `#game=${encodeURIComponent(gameSlug)}`);
+      }
+    }
   };
 
   const handleCreateNewGuestProfile = async () => {
@@ -171,55 +242,19 @@ function DashboardLobby() {
   // Synchronize browser URL hash with tabs & games for SEO crawler deep-linking
   useEffect(() => {
     const handleHash = () => {
-      const hash = window.location.hash;
-      if (hash.startsWith('#game=')) {
-        const gameParam = decodeURIComponent(hash.replace('#game=', '')).toLowerCase();
-        const matched = allGames.find(g => 
-          g.title.toLowerCase().replace(/\s+/g, '-') === gameParam ||
-          g.id.toLowerCase().replace(/\s+/g, '-') === gameParam ||
-          g.id.toLowerCase() === gameParam
-        );
-        if (matched) {
-          if (matched.isMembershipOnly && !isMember) {
-            setMembershipPromptGame(matched);
-            setActiveTab('lobby');
-          } else {
-            setActiveGame(matched.id as GameType);
-            setActiveTab('lobby');
-          }
+      const parsed = parseUrlHash();
+      if (parsed.gameId) {
+        const matched = ALL_GAMES.find(g => g.id === parsed.gameId);
+        if (matched?.isMembershipOnly && !isMember) {
+          setMembershipPromptGame(matched);
+          setActiveTab('lobby');
+          setActiveGame(null);
+        } else {
+          setActiveTab('lobby');
+          setActiveGame(parsed.gameId);
         }
-      } else if (hash === '#home') {
-        setActiveTab('home');
-        setActiveGame(null);
-      } else if (hash === '#about') {
-        setActiveTab('about');
-        setActiveGame(null);
-      } else if (hash === '#services') {
-        setActiveTab('services');
-        setActiveGame(null);
-      } else if (hash === '#blog') {
-        setActiveTab('blog');
-        setActiveGame(null);
-      } else if (hash === '#contact') {
-        setActiveTab('contact');
-        setActiveGame(null);
-      } else if (hash === '#wallet') {
-        setActiveTab('wallet');
-        setActiveGame(null);
-      } else if (hash === '#referrals') {
-        setActiveTab('referrals');
-        setActiveGame(null);
-      } else if (hash === '#leaderboard') {
-        setActiveTab('leaderboard');
-        setActiveGame(null);
-      } else if (hash === '#membership') {
-        setActiveTab('membership');
-        setActiveGame(null);
-      } else if (hash === '#admin' && user?.isAdmin) {
-        setActiveTab('admin');
-        setActiveGame(null);
-      } else if (hash === '#games' || hash === '#faq' || hash === '#lobby' || hash === '#play') {
-        setActiveTab('lobby');
+      } else {
+        setActiveTab(parsed.tab);
         setActiveGame(null);
       }
     };
@@ -240,6 +275,44 @@ function DashboardLobby() {
       : g.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+
+  // If visitor requested custom credentials, render AuthScreen with guest bypass
+  if (userRequestedAuth && !user) {
+    return (
+      <AuthScreen 
+        onContinueAsGuest={async () => {
+          setUserRequestedAuth(false);
+          await loginAsGuest();
+        }} 
+      />
+    );
+  }
+
+  // Instant guest loader for new arrivals (finishes within milliseconds)
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#0A0D1A] text-slate-100 flex flex-col items-center justify-center p-6 select-none relative overflow-hidden">
+        <SEOHead tab={activeTab} />
+        <div className="absolute top-1/4 left-1/3 w-80 h-80 bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none" />
+        <div className="flex flex-col items-center gap-5 text-center max-w-sm relative z-10">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shadow-[0_0_25px_rgba(16,185,129,0.25)] animate-pulse">
+            <Gamepad2 className="w-9 h-9 text-emerald-400 stroke-[2.2]" />
+          </div>
+          <div>
+            <span className="text-xl font-black tracking-widest uppercase text-slate-100 block">REWARDYN</span>
+            <p className="text-xs text-emerald-400 font-bold mt-1">Connecting to Play Arena...</p>
+            <p className="text-[11px] text-slate-400 mt-2">Instant Guest Pass Loading &bull; No Download Required</p>
+          </div>
+          <button
+            onClick={() => setUserRequestedAuth(true)}
+            className="mt-2 text-xs text-slate-400 hover:text-emerald-400 underline underline-offset-4 cursor-pointer transition-colors"
+          >
+            Sign in with email instead
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col md:flex-row font-sans">

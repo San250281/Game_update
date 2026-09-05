@@ -25,7 +25,11 @@ const LIVE_CLAIMS_MOCK = [
   { id: 7, user: 'shadow_strike', reward: '+500 Coins', action: 'Lucky Wheel Jackpot', time: '1m ago', color: 'text-purple-400' }
 ];
 
-export default function AuthScreen() {
+interface AuthScreenProps {
+  onContinueAsGuest?: () => void;
+}
+
+export default function AuthScreen({ onContinueAsGuest }: AuthScreenProps = {}) {
   const { loginWithEmail, loginAsGuest } = useRewardEngine();
   const [activeTab, setActiveTab] = useState<'signin' | 'register'>('signin');
   const [email, setEmail] = useState('');
@@ -33,6 +37,16 @@ export default function AuthScreen() {
   const [username, setUsername] = useState('');
   const [errorHandled, setErrorHandled] = useState<string | null>(null);
   const [loadingLocal, setLoadingLocal] = useState(false);
+
+  // If visitor reached AuthScreen via a direct games link, auto-launch guest session
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const h = (window.location.hash || '').toLowerCase();
+      if (h === '#games' || h === '#play' || h === '#lobby' || h.startsWith('#game=')) {
+        loginAsGuest().catch(() => {});
+      }
+    }
+  }, [loginAsGuest]);
 
   // Tab selections for arcade specifications layout
   const [leftTab, setLeftTab] = useState<'simulator' | 'matrix' | 'mission'>('simulator');
