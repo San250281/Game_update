@@ -32,7 +32,9 @@ export default function UserAvatar({ src, name, className = "w-10 h-10 rounded-f
   return (
     <img
       src={cleanSrc}
-      alt={name || 'User'}
+      alt={name ? `${name} - REWARDYN Player Profile Avatar` : 'REWARDYN Gamer Avatar'}
+      loading="lazy"
+      decoding="async"
       onError={() => setImageError(true)}
       referrerPolicy="no-referrer"
       className={`${className} object-cover shrink-0`}

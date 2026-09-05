@@ -110,7 +110,9 @@ export const ProfilePage: React.FC = () => {
               <div className="flex items-center gap-3">
                 <img
                   src={avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80'}
-                  alt=""
+                  alt="Current user selected gamer avatar profile"
+                  loading="lazy"
+                  decoding="async"
                   className="w-16 h-16 rounded-xl object-cover bg-slate-900 border border-slate-800"
                 />
                 <div className="flex gap-2">
@@ -123,7 +125,13 @@ export const ProfilePage: React.FC = () => {
                         avatar === av ? 'border-[#6C63FF] ring-2 ring-[#6C63FF]/30' : 'border-slate-800'
                       }`}
                     >
-                      <img src={av} alt="" className="w-full h-full object-cover" />
+                      <img 
+                        src={av} 
+                        alt={`Selectable gamer avatar option ${idx + 1}`} 
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover" 
+                      />
                     </button>
                   ))}
                 </div>

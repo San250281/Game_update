@@ -119,7 +119,7 @@ export default function ScratchCard() {
     if (!user) return;
 
     if (user.coins < entryFee) {
-      setErrorMsg(`Insufficient coins! Scratch Card costs ${entryFee} Coins. Please watch sponsor ads to earn coins.`);
+      setErrorMsg(`Insufficient coins! Scratch Card costs ${entryFee} Coins. Claim daily login coins or invite friends to get more.`);
       return;
     }
 
@@ -330,7 +330,7 @@ export default function ScratchCard() {
           cooldownLeft > 0 ? (
             <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2.5 flex items-center gap-2 text-amber-400 text-xs font-semibold w-full justify-center">
               <Clock className="w-4 h-4 shrink-0 animate-pulse" />
-              Ad-Sponsor Reload: Next card in {cooldownLeft}s
+              Card Reload: Next card in {cooldownLeft}s
             </div>
           ) : (
             <button

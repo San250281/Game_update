@@ -51,7 +51,7 @@ export default function SpinWheel() {
     const entryFee = 20;
     if (!user) return;
     if (user.coins < entryFee) {
-      setToast({ type: 'error', text: `Insufficient balance! Lucky Wheel entry fee is ${entryFee} Coins. Please watch sponsor ads to earn coins.` });
+      setToast({ type: 'error', text: `Insufficient balance! Lucky Wheel entry fee is ${entryFee} Coins. Claim daily rewards or invite friends to get coins.` });
       return;
     }
 

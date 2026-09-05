@@ -205,7 +205,13 @@ export const Rewards: React.FC = () => {
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-slate-900 border border-slate-850 flex items-start gap-3">
                   <div className="w-12 h-12 bg-slate-800 rounded-lg flex items-center justify-center overflow-hidden shrink-0 border border-slate-700">
-                    <img src={confirmReward.imageUrl} alt="" className="w-full h-full object-cover" />
+                    <img 
+                      src={confirmReward.imageUrl} 
+                      alt={`${confirmReward.title} - Voucher Reward`} 
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover" 
+                    />
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-white leading-snug">{confirmReward.title}</h4>

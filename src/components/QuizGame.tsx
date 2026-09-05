@@ -134,7 +134,7 @@ export default function QuizGame() {
     const entryFee = 30;
     if (!user) return;
     if (user.coins < entryFee) {
-      setToast({ type: 'error', text: `Insufficient balance! Quiz entry fee is ${entryFee} Coins. Please watch sponsor ads to earn coins.` });
+      setToast({ type: 'error', text: `Insufficient balance! Quiz entry fee is ${entryFee} Coins. Claim your daily rewards or invite friends to earn coins.` });
       return;
     }
 
@@ -220,7 +220,7 @@ export default function QuizGame() {
           {cooldownLeft > 0 ? (
             <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 flex items-center justify-center gap-2 text-amber-400 text-xs font-semibold">
               <Clock className="w-4 h-4 animate-pulse" />
-              Sponsor buffer active: quiz reopens in {cooldownLeft}s
+              Round buffer active: quiz reopens in {cooldownLeft}s
             </div>
           ) : (
             <button

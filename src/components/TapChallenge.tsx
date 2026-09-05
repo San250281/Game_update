@@ -67,7 +67,7 @@ export default function TapChallenge() {
     if (!user) return;
 
     if (user.coins < entryFee) {
-      setErrorMsg(`Insufficient coins! Entry fee is ${entryFee} Coins. Please watch sponsor ads to earn coins.`);
+      setErrorMsg(`Insufficient coins! Entry fee is ${entryFee} Coins. Claim daily login coins or invite friends to earn coins.`);
       return;
     }
 
@@ -195,7 +195,7 @@ export default function TapChallenge() {
           {cooldownLeft > 0 ? (
             <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2.5 mx-4 flex items-center justify-center gap-2 text-amber-400 text-xs font-semibold">
               <Hourglass className="w-4 h-4" />
-              Sponsor buffer cooling: reopens in {cooldownLeft}s
+              Round cooling buffer: reopens in {cooldownLeft}s
             </div>
           ) : (
             <button

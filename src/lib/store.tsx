@@ -6,7 +6,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   UserProfile, WalletTransaction, ReferralRecord, GameSession, AdOffer,
-  ProviderType, TransactionType, TransactionSource, GameType,
+  ProviderType, UserRole, TransactionType, TransactionSource, GameType,
   WithdrawalRequest, WithdrawalStatus
 } from '../types';
 import { isFirebaseLive, db, auth } from '../firebase';
@@ -110,6 +110,11 @@ export interface RewardEngineState {
   // Ad System
   watchAd: (adId: string) => Promise<{ success: boolean; reward: number; message: string }>;
   
+  // Membership System
+  isMember: boolean;
+  upgradeMembership: (planName: string, durationDays: number, bonusCoins?: number, coinCost?: number) => Promise<{ success: boolean; message: string }>;
+  toggleMembershipStatus: () => Promise<void>;
+
   // Admin Operations
   adminAdjustCoins: (targetUid: string, amount: number, type: 'credit' | 'debit') => Promise<void>;
   adminToggleUserStatus: (targetUid: string) => Promise<void>;
@@ -1375,6 +1380,89 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
     localStorage.removeItem('rg_fraud_logs');
   };
 
+  const isMember = Boolean(
+    user && (
+      user.role === UserRole.PREMIUM_USER || 
+      user.isAdmin || 
+      (user.membershipPlan && user.membershipPlan !== 'none' && (!user.membershipExpiresAt || new Date(user.membershipExpiresAt).getTime() > Date.now()))
+    )
+  );
+
+  const upgradeMembership = async (planName: string, durationDays: number, bonusCoins = 0, coinCost = 0): Promise<{ success: boolean; message: string }> => {
+    if (!user) return { success: false, message: 'You must be logged in to upgrade membership.' };
+
+    if (coinCost > 0 && user.coins < coinCost) {
+      return { success: false, message: `Insufficient coin balance (${user.coins}). You need ${coinCost} coins.` };
+    }
+
+    const expireDate = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
+    const newCoinCount = user.coins - coinCost + bonusCoins;
+
+    const updatedUser: UserProfile = {
+      ...user,
+      role: UserRole.PREMIUM_USER,
+      membershipPlan: planName,
+      membershipExpiresAt: expireDate.toISOString(),
+      coins: newCoinCount
+    };
+
+    const txId = 'tx_' + Math.random().toString(36).substring(2, 15);
+    const newTx: WalletTransaction = {
+      transactionId: txId,
+      uid: user.uid,
+      type: TransactionType.MEMBERSHIP_BONUS,
+      coins: bonusCoins - coinCost,
+      source: TransactionSource.BONUS,
+      description: `VIP Membership Activated: ${planName}`,
+      createdAt: new Date().toISOString()
+    };
+
+    if (isFirebaseLive && !isMockUid(user.uid)) {
+      await saveUserProfile(user.uid, updatedUser);
+      await createWalletTransaction(newTx, newCoinCount);
+    }
+
+    setUser(updatedUser);
+    localStorage.setItem('rg_user_session', JSON.stringify(updatedUser));
+
+    const updatedTxList = [newTx, ...transactions];
+    setTransactions(updatedTxList);
+
+    const updatedUsersList = allUsers.map(u => u.uid === user.uid ? updatedUser : u);
+    setAllUsers(updatedUsersList);
+
+    localStorage.setItem(`rg_tx_${user.uid}`, JSON.stringify(updatedTxList));
+    localStorage.setItem('rg_users', JSON.stringify(updatedUsersList));
+
+    return { 
+      success: true, 
+      message: `Congratulations! ${planName} is now active. All VIP games and ad-free benefits unlocked!` 
+    };
+  };
+
+  const toggleMembershipStatus = async () => {
+    if (!user) return;
+    const currentlyMember = isMember;
+    
+    const updatedUser: UserProfile = {
+      ...user,
+      role: currentlyMember ? (user.provider === ProviderType.GUEST ? UserRole.GUEST : UserRole.USER) : UserRole.PREMIUM_USER,
+      membershipPlan: currentlyMember ? undefined : 'VIP Gold Pass',
+      membershipExpiresAt: currentlyMember ? undefined : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    };
+
+    if (isFirebaseLive && !isMockUid(user.uid)) {
+      await saveUserProfile(user.uid, updatedUser);
+    }
+
+    setUser(updatedUser);
+    localStorage.setItem('rg_user_session', JSON.stringify(updatedUser));
+
+    const updatedUsersList = allUsers.map(u => u.uid === user.uid ? updatedUser : u);
+    setAllUsers(updatedUsersList);
+    localStorage.setItem('rg_users', JSON.stringify(updatedUsersList));
+  };
+
   return (
     <RewardEngineContext.Provider value={{
       user,
@@ -1405,6 +1493,10 @@ export function RewardEngineProvider({ children }: { children: React.ReactNode }
       submitGameScore,
       applyReferralCode,
       watchAd,
+
+      isMember,
+      upgradeMembership,
+      toggleMembershipStatus,
       
       adminAdjustCoins,
       adminToggleUserStatus,

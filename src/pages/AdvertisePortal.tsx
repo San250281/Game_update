@@ -203,7 +203,13 @@ export const AdvertisePortal: React.FC = () => {
                     className="bg-[#18181A] rounded-2xl border border-slate-800/40 p-4 shadow-lg flex flex-col justify-between hover:border-[#6C63FF]/30 transition-all space-y-4"
                   >
                     <div className="relative h-32 rounded-xl overflow-hidden bg-slate-900 border border-slate-850">
-                      <img src={camp.promoBannerUrl} alt="" className="w-full h-full object-cover" />
+                      <img 
+                        src={camp.promoBannerUrl} 
+                        alt={`${camp.title} - Sponsored Campaign Banner`} 
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover" 
+                      />
                       <span className="absolute top-2 left-2 text-[8px] bg-slate-950/80 px-2 py-0.5 rounded text-white font-mono uppercase tracking-widest leading-none">
                         {camp.type}
                       </span>

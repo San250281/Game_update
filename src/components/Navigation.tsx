@@ -13,7 +13,6 @@ import {
   Trophy,
   Zap,
   Share2,
-  Megaphone,
   User,
   ShieldAlert,
   LogOut,
@@ -40,9 +39,8 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab 
     { id: 'rewards', label: 'Rewards', icon: Gift },
     { id: 'wallet', label: 'Wallet', icon: WalletIcon },
     { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
-    { id: 'membership', label: 'Membership', icon: Zap },
+    { id: 'membership', label: 'VIP Membership', icon: Zap },
     { id: 'refer', label: 'Refer & Earn', icon: Share2 },
-    { id: 'advertise', label: 'Advertise With Us', icon: Megaphone },
     { id: 'profile', label: 'Profile', icon: User },
   ];
 
@@ -134,7 +132,9 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab 
           <div id="user-nav-panel" className="p-4 mx-4 my-5 rounded-xl bg-gradient-to-b from-[#1E1E22] to-[#16161A] border border-[#2A2A30] shadow-md flex items-center gap-3">
             <img
               src={currentUser.avatarUrl}
-              alt={currentUser.displayName}
+              alt={`${currentUser.displayName} - REWARDYN Active Player Profile`}
+              loading="lazy"
+              decoding="async"
               className="w-11 h-11 rounded-lg border border-[#6C63FF]/30 object-cover bg-slate-800"
             />
             <div className="flex-1 overflow-hidden">
@@ -270,7 +270,9 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab 
               <div className="p-3 mb-4 rounded-xl bg-slate-800/30 border border-slate-700/30 flex items-center gap-2.5">
                 <img
                   src={currentUser.avatarUrl}
-                  alt={currentUser.displayName}
+                  alt={`${currentUser.displayName} - Mobile User Avatar`}
+                  loading="lazy"
+                  decoding="async"
                   className="w-10 h-10 rounded-lg object-cover bg-slate-700"
                 />
                 <div className="flex-1 overflow-hidden">

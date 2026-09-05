@@ -365,7 +365,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-4">Earn Coins</h4>
             <ul className="space-y-2 text-xs text-gray-400 font-medium">
               <li><button onClick={() => onNavigate('refer')} className="hover:text-[#6C63FF]" style={{ minHeight: '32px' }}>Refer friends (Invite)</button></li>
-              <li><button onClick={() => onNavigate('advertise')} className="hover:text-[#6C63FF]" style={{ minHeight: '32px' }}>Advertise campaigns</button></li>
+              <li><button onClick={() => onNavigate('membership')} className="hover:text-[#6C63FF]" style={{ minHeight: '32px' }}>VIP Member Perks</button></li>
               <li><button onClick={() => onNavigate('wallet')} className="hover:text-[#6C63FF]" style={{ minHeight: '32px' }}>Wallet Earnings ledger</button></li>
               <li><button onClick={() => onNavigate('leaderboard')} className="hover:text-[#6C63FF]" style={{ minHeight: '32px' }}>Daily Stands</button></li>
             </ul>

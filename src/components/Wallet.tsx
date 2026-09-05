@@ -9,7 +9,7 @@ import { TransactionSource } from '../types';
 import { 
   Coins, Calendar, History, Sparkles, Check, 
   ArrowUpRight, ArrowDownRight, Clock, ShieldAlert,
-  ArrowRight, FileSpreadsheet, CheckCircle2, Gift, Send, Landmark, HelpCircle
+  ArrowRight, FileSpreadsheet, CheckCircle2, Gift, Send, Landmark, HelpCircle, Crown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -30,7 +30,8 @@ export default function Wallet() {
     withdrawalRequests, 
     gameSessions, 
     creditCoins, 
-    requestWithdrawal 
+    requestWithdrawal,
+    isMember 
   } = useRewardEngine();
 
   const [activeTab, setActiveTab] = useState<'claim' | 'withdraw' | 'history'>('claim');
@@ -98,8 +99,8 @@ export default function Wallet() {
   const playedTap = gameSessions.some(
     gs => gs.gameId === 'tap_challenge' && new Date(gs.createdAt).toDateString() === todayStr
   );
-  const watchedAd = transactions.some(
-    tx => tx.source === 'ad' && new Date(tx.createdAt).toDateString() === todayStr
+  const playedVipOrBrain = isMember || gameSessions.some(
+    gs => ['puzzle', 'chess', 'quiz', 'ludo', 'poker', 'blackjack'].includes(gs.gameId) && new Date(gs.createdAt).toDateString() === todayStr
   );
   const claimedStreak = !canClaimToday;
 
@@ -107,7 +108,7 @@ export default function Wallet() {
   let completedCount = 0;
   if (playedSpin) completedCount++;
   if (playedTap) completedCount++;
-  if (watchedAd) completedCount++;
+  if (playedVipOrBrain) completedCount++;
   if (claimedStreak) completedCount++;
 
   const allQuestsDone = completedCount === 4;
@@ -181,7 +182,7 @@ export default function Wallet() {
 
   const formatSource = (src: string) => {
     if (src === 'game') return 'Mini Game Play';
-    if (src === 'ad') return 'Rewarded Sponsor Ad';
+    if (src === 'ad') return 'VIP Perk / Bonus Drop';
     if (src === 'referral') return 'Referral Invite';
     if (src === 'bonus') return 'Bonus / Check-in';
     if (src === 'admin') return 'Admin Adjustment';
@@ -400,19 +401,22 @@ export default function Wallet() {
                   </span>
                 </div>
 
-                {/* 4. Reward ad */}
+                {/* 4. VIP or Strategy Quest */}
                 <div className="flex items-center justify-between p-2.5 bg-white border border-slate-150 rounded-xl hover:border-slate-250 transition-all">
                   <div className="flex items-center gap-2.5">
-                    <div className={`w-5.5 h-5.5 rounded-full flex items-center justify-center ${watchedAd ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                    <div className={`w-5.5 h-5.5 rounded-full flex items-center justify-center ${playedVipOrBrain ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
                       <Check className="w-3.5 h-3.5 stroke-[3]" />
                     </div>
                     <div>
-                      <h5 className="text-[11px] font-black text-slate-700 uppercase tracking-wide leading-none">Sponsor reward ad</h5>
-                      <span className="text-[9px] text-slate-400 font-medium font-bold">Watch sponsors monetized video ads</span>
+                      <h5 className="text-[11px] font-black text-slate-700 uppercase tracking-wide leading-none flex items-center gap-1">
+                        VIP / Brain Arena Quest
+                        {isMember && <Crown className="w-3 h-3 text-amber-500 fill-amber-400 inline" />}
+                      </h5>
+                      <span className="text-[9px] text-slate-400 font-medium font-bold">Play Chess, Puzzle, Quiz or activate VIP</span>
                     </div>
                   </div>
-                  <span className={`text-[10px] font-mono font-black ${watchedAd ? 'text-emerald-650' : 'text-slate-400'}`}>
-                    {watchedAd ? 'COMPLETE' : '+50 COINS'}
+                  <span className={`text-[10px] font-mono font-black ${playedVipOrBrain ? 'text-emerald-650' : 'text-slate-400'}`}>
+                    {playedVipOrBrain ? 'COMPLETE' : '+50 COINS'}
                   </span>
                 </div>
               </div>

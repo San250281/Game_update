@@ -8,9 +8,11 @@ import { useRewardEngine } from '../lib/store';
 import { 
   Gamepad2, Mail, Lock, User, Sparkles, LogIn, 
   ShieldCheck, AlertCircle, Coins, Award, Info, Zap,
-  Globe, Cpu, Check, ChevronRight, Plus, Copy, ExternalLink, X
+  Globe, Cpu, ChevronRight, Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import SEOHead from './SEOHead';
+import SEOContentSection from './SEOContentSection';
 
 // Live dynamic claims ticker mimicking real-time player claims
 const LIVE_CLAIMS_MOCK = [
@@ -23,80 +25,14 @@ const LIVE_CLAIMS_MOCK = [
   { id: 7, user: 'shadow_strike', reward: '+500 Coins', action: 'Lucky Wheel Jackpot', time: '1m ago', color: 'text-purple-400' }
 ];
 
-// Helper to extract a beautiful natural gaming name from any email address
-const getFriendlyNameFromEmail = (emailStr: string): string => {
-  if (!emailStr) return 'Gamer';
-  const prefix = emailStr.split('@')[0];
-  // Replace dots, hyphens, and underscores with space, capitalize each word
-  return prefix
-    .split(/[\._\-]/)
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-};
-
 export default function AuthScreen() {
-  const { loginWithEmail, loginAsGuest, loginWithGoogle } = useRewardEngine();
+  const { loginWithEmail, loginAsGuest } = useRewardEngine();
   const [activeTab, setActiveTab] = useState<'signin' | 'register'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [errorHandled, setErrorHandled] = useState<string | null>(null);
   const [loadingLocal, setLoadingLocal] = useState(false);
-
-  // SSO Authorization Error & Sandbox Fallback States
-  const [showDomainError, setShowDomainError] = useState(false);
-  const [currentHostname, setCurrentHostname] = useState('');
-  const [showSsoSandbox, setShowSsoSandbox] = useState(false);
-  const [sandboxName, setSandboxName] = useState('');
-  const [sandboxEmail, setSandboxEmail] = useState('');
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setCurrentHostname(window.location.hostname);
-    }
-  }, []);
-
-  const copyDomainToClipboard = () => {
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(currentHostname);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  const handleSandboxLogin = async (rawName: string, emailStr: string) => {
-    setLoadingLocal(true);
-    setErrorHandled(null);
-    setShowDomainError(false);
-    setShowSsoSandbox(false);
-
-    const cleanEmail = emailStr.toLowerCase().trim();
-    const derivedName = rawName && rawName !== 'Active Player' && rawName !== 'Gamer'
-      ? rawName
-      : getFriendlyNameFromEmail(cleanEmail);
-
-    try {
-      const pUrl = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${cleanEmail}`;
-      await loginWithGoogle(
-        derivedName,
-        cleanEmail,
-        pUrl,
-        true // forceSimulate = true
-      );
-    } catch (err: any) {
-      setErrorHandled(err.message || 'Sandbox connection interrupted.');
-    } finally {
-      setLoadingLocal(false);
-    }
-  };
-
-  const handleSsoCustomSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!sandboxEmail.trim()) return;
-    await handleSandboxLogin(sandboxName, sandboxEmail);
-  };
 
   // Tab selections for arcade specifications layout
   const [leftTab, setLeftTab] = useState<'simulator' | 'matrix' | 'mission'>('simulator');
@@ -148,25 +84,6 @@ export default function AuthScreen() {
     }
   };
 
-  // Google Sign-In Handler - Direct Google Authentication Pop-up
-  const handleGoogleJoinClick = async () => {
-    setLoadingLocal(true);
-    setErrorHandled(null);
-    try {
-      await loginWithGoogle();
-    } catch (err: any) {
-      console.warn('Google Pop-up Authentication Error:', err);
-      const errMsg = err?.message || String(err);
-      if (errMsg.includes('auth/unauthorized-domain') || errMsg.includes('unauthorized-domain')) {
-        setShowDomainError(true);
-      } else {
-        setErrorHandled(errMsg || 'Google authentication interrupted.');
-      }
-    } finally {
-      setLoadingLocal(false);
-    }
-  };
-
   // Forecast values calculator
   const calculateEstimateReward = () => {
     const baseRewardPerGame = 85; 
@@ -192,6 +109,7 @@ export default function AuthScreen() {
 
       {/* Main viewport limit frame */}
       <div className="w-full max-w-6xl relative z-10 flex flex-col gap-6 my-4">
+        <SEOHead tab="lobby" />
         
         {/* PREMIUM STATUS HEADER RAIL (Modern, minimal and elegant) */}
         <div className="w-full bg-[#111625]/90 backdrop-blur-md border border-slate-800 rounded-2xl px-6 py-3.5 flex flex-wrap items-center justify-between gap-4 shadow-2xl text-xs">
@@ -561,30 +479,12 @@ export default function AuthScreen() {
                 </button>
               </div>
 
-              {/* PRIMARY ONE-CLICK LOGINS PLACED SENSIVELY AT TOP AS REQUESTED */}
-              <div className="flex flex-col gap-3.5 mb-6">
-                <div className="grid grid-cols-1 gap-3">
-                  <button
-                    id="google_sso_btn"
-                    onClick={handleGoogleJoinClick}
-                    className="py-3 bg-[#171f30] border border-slate-800 hover:border-slate-705 hover:bg-[#1e2840] rounded-xl text-xs font-bold text-slate-205 transition-all flex items-center justify-center gap-2.5 cursor-pointer shadow-sm hover:scale-[1.01] active:translate-y-[1px]"
-                  >
-                    {/* Google Icon Vector */}
-                    <svg className="w-4.5 h-4.5 shrink-0" viewBox="0 0 24 24">
-                      <path fill="#ea4335" d="M12 5.04c1.61 0 3.05.55 4.19 1.63L19.3 3.6A11.9 11.9 0 0 0 12 1A11.9 11.9 0 0 0 1.29 8h4.55A6.9 6.9 0 0 1 12 5.04z"/>
-                      <path fill="#4285f4" d="M23 12c0-.79-.07-1.54-.19-2.27H12v4.51h6.18a5.29 5.29 0 0 1-2.29 3.47v2.89h3.7A11.9 11.9 0 0 0 23 12z"/>
-                      <path fill="#fbbc05" d="M5.84 14.53a7.07 7.07 0 0 1 0-5.06V5.92H1.29a11.9 11.9 0 0 0 0 12.16l4.55-3.55z"/>
-                      <path fill="#34a853" d="M12 23a11.8 11.8 0 0 0 8.01-2.92l-3.7-2.89a6.9 6.9 0 0 1-9.76-3.66H1.29v3.55A11.9 11.9 0 0 0 12 23z"/>
-                    </svg>
-                    Continue with Google
-                  </button>
-                </div>
-
-                {/* Main Guest Shortcut */}
+              {/* ONE-CLICK INSTANT GUEST PLAY */}
+              <div className="flex flex-col gap-3 mb-6">
                 <button
                   id="guest_login_btn"
                   onClick={handleGuestJoin}
-                  className="w-full py-3 bg-[#10b981]/15 hover:bg-[#10b981]/25 text-emerald-400 text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all border border-emerald-500/20 shadow-sm uppercase tracking-wider active:scale-[0.99] hover:border-emerald-500/40"
+                  className="w-full py-3.5 bg-[#10b981]/15 hover:bg-[#10b981]/25 text-emerald-400 text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all border border-emerald-500/20 shadow-sm uppercase tracking-wider active:scale-[0.99] hover:border-emerald-500/40"
                 >
                   <Sparkles className="w-4 h-4 text-emerald-400 animate-bounce" />
                   Instant Guest Play (Fast Test)
@@ -595,7 +495,7 @@ export default function AuthScreen() {
               <div className="relative flex py-2 items-center mb-5">
                 <div className="flex-grow border-t border-slate-800" />
                 <span className="flex-shrink mx-3.5 text-[9.5px] text-slate-550 font-bold uppercase tracking-widest leading-none font-mono">
-                  OR SECURE WEB SIGN-IN
+                  OR SIGN IN WITH EMAIL
                 </span>
                 <div className="flex-grow border-t border-slate-800" />
               </div>
@@ -678,233 +578,15 @@ export default function AuthScreen() {
 
         </div>
 
+        {/* SEO-Friendly Content Structure & AI GEO Data Section */}
+        <div className="mt-8 bg-[#111625]/90 border border-slate-800 rounded-3xl p-6 lg:p-8 shadow-2xl backdrop-blur-md">
+          <SEOContentSection 
+            onSelectCategory={() => loginAsGuest()} 
+            onSelectGame={() => loginAsGuest()} 
+          />
+        </div>
+
       </div>
-
-      {/* INTELLIGENT FIREBASE AUTH DOMAIN ERROR & SANDBOX ALTERNATIVE DIALOG */}
-      <AnimatePresence>
-        {showDomainError && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.18 }}
-              className="w-full max-w-lg bg-[#111625] border border-slate-800 shadow-2xl rounded-2xl relative overflow-hidden font-sans text-slate-200"
-            >
-              {/* Highlight warning header border line */}
-              <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-rose-500 via-amber-500 to-indigo-500" />
-              
-              <div className="p-6 md:p-8">
-                {/* Header title */}
-                <div className="flex items-start gap-4 mb-5">
-                  <div className="w-11 h-11 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
-                    <AlertCircle className="w-6 h-6 text-rose-450 animate-pulse" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-base font-bold text-white tracking-tight uppercase">
-                      Auth Domain Required
-                    </h3>
-                    <p className="text-[10.5px] text-rose-450 uppercase tracking-widest font-mono font-bold mt-0.5">
-                      Firebase Security Exception
-                    </p>
-                  </div>
-                  <button 
-                    onClick={() => setShowDomainError(false)} 
-                    className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {!showSsoSandbox ? (
-                  /* STEP 1: EXPLAIN THE AUTHORIZED DOMAIN ERROR AND HOW TO RESOLVE */
-                  <div className="space-y-4 text-xs text-slate-300">
-                    <p className="leading-relaxed text-slate-320">
-                      Firebase blocks Google Pop-ups on this URL because the current preview domain is not listed in your project's authorized authentication domains.
-                    </p>
-
-                    {/* Target domain Copy card */}
-                    <div className="bg-[#0a0d1a] border border-slate-800 rounded-xl p-4 space-y-2.5">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono">
-                          Current Preview Domain
-                        </span>
-                        <span className="text-[9px] text-[#10b981] bg-[#10b981]/10 px-2 py-0.5 rounded font-mono font-bold">
-                          COPY TARGET
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 bg-[#12192a] border border-slate-850 px-3.5 py-2.5 rounded-lg select-all">
-                        <span className="font-mono text-[11px] text-emerald-450 break-all flex-1 font-bold">
-                          {currentHostname || 'Loading domain...'}
-                        </span>
-                        <button
-                          onClick={copyDomainToClipboard}
-                          className="p-1.5 rounded-md bg-[#1d273f] hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-400 transition-colors cursor-pointer shrink-0"
-                          title="Copy domain to clipboard"
-                        >
-                          {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Quick Step Guide */}
-                    <div className="space-y-2">
-                      <h4 className="font-bold text-white uppercase tracking-tight text-[11px] flex items-center gap-1.5">
-                        <ShieldCheck className="w-4 h-4 text-[#10b981]" />
-                        Authorize in 30 Seconds:
-                      </h4>
-                      <ol className="list-decimal list-inside pl-1 space-y-1.5 pl-0 text-slate-320 leading-relaxed font-sans text-[11px]">
-                        <li>
-                          Open the <a href="https://console.firebase.google.com/project/gen-lang-client-0545156599/authentication/providers" target="_blank" rel="noreferrer" className="text-[#10b981] font-bold underline hover:text-emerald-350 inline-flex items-center gap-0.5">Firebase Console <ExternalLink className="w-3 h-3" /></a>
-                        </li>
-                        <li>
-                          Go to <strong className="text-white">Authentication</strong> &gt; <strong className="text-white">Settings</strong> &gt; <strong className="text-white">Authorized domains</strong>.
-                        </li>
-                        <li>
-                          Click <strong className="text-[#10b981]">Add domain</strong> and paste this exact domain value.
-                        </li>
-                      </ol>
-                    </div>
-
-                    {/* Action partition */}
-                    <div className="relative flex py-2 items-center">
-                      <div className="flex-grow border-t border-slate-800" />
-                      <span className="flex-shrink mx-3 text-[9px] text-slate-500 font-bold uppercase tracking-widest leading-none font-mono">
-                        OR BYPASS COMPLETELY
-                      </span>
-                      <div className="flex-grow border-t border-slate-800" />
-                    </div>
-
-                    {/* Bypass buttons */}
-                    <div className="flex flex-col gap-3">
-                      <button
-                        onClick={() => setShowSsoSandbox(true)}
-                        className="w-full py-3 bg-[#10b981]/15 hover:bg-[#10b981]/25 text-emerald-400 text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all border border-emerald-500/20 shadow-md uppercase tracking-wider scale-[1.01]"
-                      >
-                        <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
-                        Use Google Sandbox Simulator
-                      </button>
-
-                      <div className="grid grid-cols-2 gap-3 pt-1">
-                        <button
-                          onClick={handleGuestJoin}
-                          className="py-2.5 bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-white text-[11px] font-bold rounded-xl transition-all border border-slate-800 uppercase tracking-widest cursor-pointer text-center"
-                        >
-                          Guest Play
-                        </button>
-                        <button
-                          onClick={() => setShowDomainError(false)}
-                          className="py-2.5 bg-[#171f30] hover:bg-[#1e2840] text-slate-400 hover:text-slate-200 text-[11px] font-bold rounded-xl transition-all border border-slate-850 uppercase tracking-widest cursor-pointer text-center"
-                        >
-                          Close Warning
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  /* STEP 2: CHOOSE ACCOUNT SIMULATION OR CUSTOM DATA */
-                  <div className="flex flex-col gap-4">
-                    <p className="text-xs text-slate-300 leading-relaxed">
-                      Choose a Google account identity to synchronize. Game sessions and real-time ledger records will function beautifully using an authorized anonymous session:
-                    </p>
-
-                    <div className="flex flex-col gap-3">
-                      {/* SIMULATED ACCOUNT 1: Game Rewardyn (ADMIN USER!!!!) */}
-                      <button
-                        onClick={() => handleSandboxLogin("Game Rewardyn", "game.rewardyn@gmail.com")}
-                        className="w-full text-left p-4 bg-[#0a0d1a] hover:bg-[#101627] border border-slate-800 hover:border-slate-700 rounded-xl flex items-center justify-between cursor-pointer transition-all group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-sm border border-emerald-600 shadow-sm font-display">
-                            G
-                          </div>
-                          <div>
-                            <h4 className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors flex items-center gap-1.5 uppercase tracking-wide">
-                              Game Rewardyn
-                              <span className="text-[7.5px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-mono uppercase font-black">
-                                ACTIVE DEV (ADMIN)
-                              </span>
-                            </h4>
-                            <p className="text-[10px] text-slate-400 font-mono mt-0.5">game.rewardyn@gmail.com</p>
-                          </div>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-slate-500 group-hover:translate-x-0.5 group-hover:text-emerald-400 transition-all" />
-                      </button>
-
-                      {/* SIMULATED ACCOUNT 2: Apex Rider */}
-                      <button
-                        onClick={() => handleSandboxLogin("Apex Rider", "apex.rider@gmail.com")}
-                        className="w-full text-left p-4 bg-[#0a0d1a] hover:bg-[#101627] border border-slate-800 hover:border-slate-700 rounded-xl flex items-center justify-between cursor-pointer transition-all group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-slate-900 border border-slate-850 text-emerald-400 flex items-center justify-center font-bold text-xs shadow-sm font-display">
-                            AR
-                          </div>
-                          <div>
-                            <h4 className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">
-                              Apex Rider
-                            </h4>
-                            <p className="text-[10px] text-slate-400 font-mono mt-0.5">apex.rider@gmail.com</p>
-                          </div>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-slate-500 group-hover:translate-x-0.5 group-hover:text-emerald-400 transition-all" />
-                      </button>
-
-                      {/* SIMULATED ACCOUNT 3: CUSTOM IDENTITY FORM */}
-                      <form onSubmit={handleSsoCustomSubmit} className="border-t border-slate-800 pt-4 mt-1 space-y-3">
-                        <span className="block text-[9.5px] text-slate-400 uppercase font-bold font-mono tracking-widest mb-1.5">
-                          Use Custom Simulated Profile
-                        </span>
-                        
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-[9px] text-slate-450 uppercase font-bold tracking-wider mb-1">Display Name</label>
-                            <input
-                              type="text"
-                              placeholder="e.g. Pro Player"
-                              value={sandboxName}
-                              onChange={(e) => setSandboxName(e.target.value)}
-                              className="w-full px-3 py-2 bg-[#0a0d1a]/80 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500/60"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[9px] text-slate-450 uppercase font-bold tracking-wider mb-1">Email address</label>
-                            <input
-                              required
-                              type="email"
-                              placeholder="e.g. player@gmail.com"
-                              value={sandboxEmail}
-                              onChange={(e) => setSandboxEmail(e.target.value)}
-                              className="w-full px-3 py-2 bg-[#0a0d1a]/80 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500/60"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Custom Submit Button */}
-                        <div className="flex gap-2.5 pt-2">
-                          <button
-                            type="button"
-                            onClick={() => setShowSsoSandbox(false)}
-                            className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg transition-colors border border-slate-800 cursor-pointer uppercase tracking-wider text-center text-[10px]"
-                          >
-                            Back to Steps
-                          </button>
-                          <button
-                            type="submit"
-                            className="flex-1 py-1.5 bg-emerald-500 text-slate-950 font-bold text-xs uppercase rounded-lg tracking-wider transition-colors hover:bg-emerald-450 cursor-pointer text-center text-[10px]"
-                          >
-                            Sign In Simulated
-                          </button>
-                        </div>
-                      </form>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
     </div>
   );

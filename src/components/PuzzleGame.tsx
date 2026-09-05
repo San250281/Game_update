@@ -108,7 +108,7 @@ export default function PuzzleGame() {
     if (!user) return;
 
     if (user.coins < entryFee) {
-      setToast({ type: 'error', text: `Insufficient balance! Puzzle entry fee is ${entryFee} Coins. Please watch sponsor ads to earn coins.` });
+      setToast({ type: 'error', text: `Insufficient balance! Puzzle entry fee is ${entryFee} Coins. Claim your daily rewards or invite friends to get bonus coins!` });
       return;
     }
 
